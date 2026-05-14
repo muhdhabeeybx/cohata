@@ -6,7 +6,7 @@ export function SiteFooter() {
   const [sent, setSent] = useState(false);
 
   return (
-    <footer className="bg-primary text-primary-foreground mt-24">
+    <footer className="bg-primary text-primary-foreground">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-20">
         <div className="grid lg:grid-cols-12 gap-12 mb-16">
           <div className="lg:col-span-5">

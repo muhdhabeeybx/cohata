@@ -71,17 +71,17 @@ function Home() {
 
           <div className="lg:col-span-5 relative">
             <div className="aspect-[4/5] rounded-3xl overflow-hidden shadow-elegant relative">
-              <img src={heroImg} alt="Calm flowing emerald and gold composition representing transformation" className="w-full h-full object-cover" width={1536} height={1280} />
+              <img src={heroImg} alt="Two women sitting on a beach facing the ocean" className="w-full h-full object-cover" width={1536} height={1280} />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent" />
               <div className="absolute bottom-8 left-8 right-8 text-primary-foreground">
-                <p className="font-display italic text-2xl text-balance">
+                {/* <p className="font-display italic text-2xl text-balance">
                   "Indeed, Allah will not change the condition of a people until they change what is in themselves."
                 </p>
-                <p className="text-sm mt-3 opacity-80">— Qur'an 13:11</p>
+                <p className="text-sm mt-3 opacity-80">— Qur'an 13:11</p> */}
               </div>
             </div>
             <div className="absolute -bottom-6 -left-6 bg-gradient-gold rounded-2xl p-5 shadow-gold hidden md:block">
-              <p className="text-xs uppercase tracking-[0.2em] text-gold-foreground/70">Tagline</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-gold-foreground/70">Qur'an 13:11</p>
               <p className="font-display text-xl text-gold-foreground">Faith. Growth. Transformation.</p>
             </div>
           </div>
