@@ -10,6 +10,32 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Serve static assets directly — must come before the catch-all SSR redirect
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/*.js"
+  to = "/:splat.js"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/*.css"
+  to = "/:splat.css"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/*.map"
+  to = "/:splat.map"
+  status = 200
+  force = false
+
+# Everything else goes through the SSR function
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/server"
