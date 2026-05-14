@@ -6,6 +6,11 @@
   NODE_VERSION = "20"
   NETLIFY = "true"
 
-[[edge_functions]]
-  function = "server"
-  path = "/*"
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200
