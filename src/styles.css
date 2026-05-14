@@ -1,0 +1,154 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-display: "Fraunces", "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
+
+:root {
+  --radius: 0.75rem;
+
+  /* Cream / ivory canvas */
+  --background: oklch(0.985 0.010 60);
+  --foreground: oklch(0.22 0.04 350);
+
+  --card: oklch(0.995 0.004 60);
+  --card-foreground: oklch(0.22 0.04 350);
+  --popover: oklch(0.995 0.004 60);
+  --popover-foreground: oklch(0.22 0.04 350);
+
+  /* Brand magenta / plum (from logo) */
+  --primary: oklch(0.45 0.16 350);
+  --primary-foreground: oklch(0.98 0.01 90);
+
+  /* Soft blush */
+  --secondary: oklch(0.94 0.03 350);
+  --secondary-foreground: oklch(0.35 0.12 350);
+
+  --muted: oklch(0.95 0.012 60);
+  --muted-foreground: oklch(0.48 0.04 350);
+
+  --accent: oklch(0.93 0.05 80);
+  --accent-foreground: oklch(0.35 0.12 350);
+
+  /* Brand mustard gold (from logo) */
+  --gold: oklch(0.74 0.14 80);
+  --gold-foreground: oklch(0.25 0.05 80);
+
+  --destructive: oklch(0.55 0.20 27);
+  --destructive-foreground: oklch(0.98 0.01 90);
+
+  --border: oklch(0.88 0.02 60);
+  --input: oklch(0.9 0.015 60);
+  --ring: oklch(0.45 0.16 350);
+
+  --gradient-hero: linear-gradient(135deg, oklch(0.45 0.16 350) 0%, oklch(0.55 0.17 5) 50%, oklch(0.74 0.14 80) 100%);
+  --gradient-gold: linear-gradient(135deg, oklch(0.80 0.14 85), oklch(0.68 0.14 70));
+  --gradient-soft: linear-gradient(180deg, oklch(0.985 0.010 60) 0%, oklch(0.96 0.025 350) 100%);
+
+  --shadow-soft: 0 1px 2px oklch(0.45 0.16 350 / 0.05), 0 8px 24px oklch(0.45 0.16 350 / 0.08);
+  --shadow-elegant: 0 20px 60px -20px oklch(0.45 0.16 350 / 0.28);
+  --shadow-gold: 0 10px 30px -10px oklch(0.74 0.14 80 / 0.45);
+}
+
+.dark {
+  --background: oklch(0.18 0.03 350);
+  --foreground: oklch(0.95 0.01 60);
+  --card: oklch(0.22 0.04 350);
+  --card-foreground: oklch(0.95 0.01 60);
+  --popover: oklch(0.22 0.04 350);
+  --popover-foreground: oklch(0.95 0.01 60);
+  --primary: oklch(0.78 0.13 80);
+  --primary-foreground: oklch(0.2 0.04 350);
+  --secondary: oklch(0.28 0.06 350);
+  --secondary-foreground: oklch(0.95 0.01 60);
+  --muted: oklch(0.26 0.04 350);
+  --muted-foreground: oklch(0.7 0.03 60);
+  --accent: oklch(0.32 0.10 350);
+  --accent-foreground: oklch(0.95 0.01 60);
+  --gold: oklch(0.78 0.13 80);
+  --gold-foreground: oklch(0.2 0.04 80);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.78 0.13 80);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    font-weight: 500;
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: var(--font-display); }
+  .bg-gradient-hero { background-image: var(--gradient-hero); }
+  .bg-gradient-gold { background-image: var(--gradient-gold); }
+  .bg-gradient-soft { background-image: var(--gradient-soft); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-elegant { box-shadow: var(--shadow-elegant); }
+  .shadow-gold { box-shadow: var(--shadow-gold); }
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  .ornament::before,
+  .ornament::after {
+    content: "";
+    display: inline-block;
+    width: 2.5rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.4;
+    vertical-align: middle;
+    margin: 0 0.75rem;
+  }
+}
