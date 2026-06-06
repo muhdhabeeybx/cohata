@@ -34,12 +34,21 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
-          <Link
-            to="/book"
-            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition shadow-soft"
-          >
-            Begin Your Journey
-          </Link>
+          <div className="flex items-center gap-4 pl-4 border-l border-border/40">
+            <Link
+              to="/admin/dashboard"
+              className="text-xs text-foreground/50 hover:text-foreground/80 transition-colors"
+              activeProps={{ className: "text-foreground font-medium" }}
+            >
+              Admin
+            </Link>
+            <Link
+              to="/book"
+              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition shadow-soft"
+            >
+              Begin Your Journey
+            </Link>
+          </div>
         </nav>
 
         <button

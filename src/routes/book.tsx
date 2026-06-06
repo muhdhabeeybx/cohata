@@ -122,7 +122,27 @@ function Book() {
               </div>
             </>
           ) : (
-            <form onSubmit={(e) => { e.preventDefault(); setDone(true); }}>
+            <form onSubmit={(e) => {
+            e.preventDefault();
+            // Save to admin dashboard
+            try {
+              const existing = JSON.parse(localStorage.getItem("cohata_bookings") ?? "[]");
+              const entry = {
+                id: Date.now().toString(),
+                name: info.name,
+                phone: info.phone,
+                program: selectedType?.name ?? type ?? "",
+                status: "Pending",
+                enrollmentDate: date,
+                sessionDate: date,
+                sessionTime: time ?? "",
+                notes: info.note,
+                createdAt: new Date().toISOString(),
+              };
+              localStorage.setItem("cohata_bookings", JSON.stringify([entry, ...existing]));
+            } catch {}
+            setDone(true);
+          }}>
               <h2 className="font-display text-2xl text-primary mb-6">Your details</h2>
               <div className="space-y-4">
                 <input required placeholder="Full name" value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} className="w-full px-5 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary" />
