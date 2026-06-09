@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import {
   LayoutDashboard,
@@ -26,6 +26,12 @@ import {
   CalendarOff,
   CalendarCheck,
   Settings2,
+  BookOpen,
+  Image as ImageIcon,
+  Upload,
+  Link as LinkIcon,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,19 +66,35 @@ export interface Booking {
   createdAt: string;
 }
 
+export interface Program {
+  id: string;
+  title: string;
+  tag: string;
+  description: string;
+  fullDescription: string;
+  duration: string;
+  startDate: string;
+  price: string;
+  imageUrl: string;
+  status: "active" | "draft";
+  enrollmentOpen: boolean;
+  order: number;
+  createdAt: string;
+}
+
 interface ProgramDates {
   [program: string]: string[];
 }
 
 export interface Availability {
-  days: string[];           // e.g. ["mon","tue","wed","thu","fri"]
-  startTime: string;        // "09:00"
-  endTime: string;          // "17:00"
-  slotMinutes: number;      // 60
-  blockedDates: string[];   // ["2026-12-25", ...] — days off entirely
+  days: string[];
+  startTime: string;
+  endTime: string;
+  slotMinutes: number;
+  blockedDates: string[];
 }
 
-type View = "overview" | "bookings" | "availability" | "schedule";
+type View = "overview" | "bookings" | "availability" | "schedule" | "programs";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -137,10 +159,11 @@ const STATUS_CFG: Record<
 };
 
 const NAV = [
-  { id: "overview" as View,     label: "Overview",      Icon: LayoutDashboard },
-  { id: "bookings" as View,     label: "Bookings",      Icon: Users },
-  { id: "availability" as View, label: "Availability",  Icon: Clock },
-  { id: "schedule" as View,     label: "Program Intake",Icon: CalendarDays },
+  { id: "overview" as View,     label: "Overview",       Icon: LayoutDashboard },
+  { id: "bookings" as View,     label: "Bookings",       Icon: Users },
+  { id: "availability" as View, label: "Availability",   Icon: Clock },
+  { id: "schedule" as View,     label: "Program Intake", Icon: CalendarDays },
+  { id: "programs" as View,     label: "Programs CMS",   Icon: BookOpen },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -198,11 +221,17 @@ function emptyForm() {
   return { name: "", phone: "", program: "", status: "Pending", enrollmentDate: new Date().toISOString().split("T")[0], sessionDate: "", sessionTime: "", notes: "" };
 }
 
+function emptyProgramForm() {
+  return { title: "", tag: "", description: "", fullDescription: "", duration: "", startDate: "", price: "", imageUrl: "", status: "active" as const, enrollmentOpen: true };
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function BookingsDashboard() {
   const [view, setView] = useState<View>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Bookings state
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [programDates, setProgramDates] = useState<ProgramDates>({});
   const [availability, setAvailability] = useState<Availability>(DEFAULT_AVAILABILITY);
@@ -215,19 +244,30 @@ export function BookingsDashboard() {
   const [tempNotes, setTempNotes] = useState("");
   const [dateInputs, setDateInputs] = useState<Record<string, string>>({});
   const [form, setForm] = useState(emptyForm());
+
+  // Programs CMS state
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [isProgramOpen, setIsProgramOpen] = useState(false);
+  const [programEditId, setProgramEditId] = useState<string | null>(null);
+  const [programForm, setProgramForm] = useState(emptyProgramForm());
+  const [programImageTab, setProgramImageTab] = useState<"url" | "upload">("url");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(true);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [b, d, a] = await Promise.all([
+      const [b, d, a, progs] = await Promise.all([
         api.get<Booking[]>("/api/bookings"),
         api.get<ProgramDates>("/api/program-dates"),
         api.get<Availability>("/api/availability"),
+        api.get<Program[]>("/api/programs?all=true"),
       ]);
       setBookings(b);
       setProgramDates(d);
       setAvailability({ ...DEFAULT_AVAILABILITY, ...a });
+      setPrograms(progs);
     } catch (err) {
       console.error("Failed to load data:", err);
     } finally {
@@ -236,6 +276,8 @@ export function BookingsDashboard() {
   }, []);
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
+
+  // ── Availability mutations ──────────────────────────────────────────────────
 
   const persistAvailability = async (a: Availability) => {
     setAvailability(a);
@@ -265,6 +307,8 @@ export function BookingsDashboard() {
   const removeBlockedDate = (date: string) => {
     persistAvailability({ ...availability, blockedDates: availability.blockedDates.filter((d) => d !== date) });
   };
+
+  // ── Booking mutations ───────────────────────────────────────────────────────
 
   const updateStatus = async (id: string, status: string) => {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
@@ -312,6 +356,76 @@ export function BookingsDashboard() {
   const removeProgramDate = (program: string, date: string) => {
     persistDates({ ...programDates, [program]: (programDates[program] ?? []).filter((d) => d !== date) });
   };
+
+  // ── Programs CMS mutations ──────────────────────────────────────────────────
+
+  const openAddProgram = () => {
+    setProgramForm(emptyProgramForm());
+    setProgramEditId(null);
+    setProgramImageTab("url");
+    setIsProgramOpen(true);
+  };
+
+  const openEditProgram = (p: Program) => {
+    setProgramForm({
+      title: p.title, tag: p.tag, description: p.description,
+      fullDescription: p.fullDescription, duration: p.duration,
+      startDate: p.startDate, price: p.price, imageUrl: p.imageUrl,
+      status: p.status, enrollmentOpen: p.enrollmentOpen,
+    });
+    setProgramEditId(p.id);
+    setProgramImageTab(p.imageUrl.startsWith("data:") ? "upload" : "url");
+    setIsProgramOpen(true);
+  };
+
+  const saveProgram = async () => {
+    if (!programForm.title.trim()) {
+      alert("Title is required.");
+      return;
+    }
+    try {
+      if (programEditId) {
+        const updated = await api.patch<Program>(`/api/programs/${programEditId}`, programForm);
+        setPrograms((prev) => prev.map((p) => p.id === programEditId ? updated : p));
+      } else {
+        const created = await api.post<Program>("/api/programs", programForm);
+        setPrograms((prev) => [created, ...prev]);
+      }
+      setIsProgramOpen(false);
+      setProgramEditId(null);
+      setProgramForm(emptyProgramForm());
+    } catch {
+      alert("Failed to save program. Is the API server running?");
+    }
+  };
+
+  const deleteProgram = async (id: string) => {
+    if (!confirm("Delete this program? This cannot be undone.")) return;
+    setPrograms((prev) => prev.filter((p) => p.id !== id));
+    await api.del(`/api/programs/${id}`).catch(console.error);
+  };
+
+  const toggleProgramStatus = async (p: Program) => {
+    const newStatus = p.status === "active" ? "draft" : "active";
+    setPrograms((prev) => prev.map((x) => x.id === p.id ? { ...x, status: newStatus } : x));
+    await api.patch(`/api/programs/${p.id}`, { status: newStatus }).catch(console.error);
+  };
+
+  const handleProgramImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      alert("Image must be under 3 MB. Try compressing it first.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setProgramForm((f) => ({ ...f, imageUrl: ev.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // ── Derived state ───────────────────────────────────────────────────────────
 
   const filtered = bookings.filter((b) => {
     const matchStatus = filterStatus === "All" || b.status === filterStatus;
@@ -381,7 +495,7 @@ export function BookingsDashboard() {
           <div className="bg-card border border-border rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="font-semibold text-foreground">Recent Bookings</h2>
-              <button onClick={() => setView("bookings")} className="text-xs text-primary flex items-center gap-1 hover:gap-2 transition-all">
+              <button type="button" onClick={() => setView("bookings")} className="text-xs text-primary flex items-center gap-1 hover:gap-2 transition-all">
                 View all <ChevronRight size={13} />
               </button>
             </div>
@@ -407,7 +521,7 @@ export function BookingsDashboard() {
           <div className="bg-card border border-border rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h2 className="font-semibold text-foreground flex items-center gap-2"><CalendarCheck size={16} className="text-primary" /> Upcoming Sessions</h2>
-              <button onClick={() => setView("availability")} className="text-xs text-primary flex items-center gap-1 hover:gap-2 transition-all">
+              <button type="button" onClick={() => setView("availability")} className="text-xs text-primary flex items-center gap-1 hover:gap-2 transition-all">
                 Availability <ChevronRight size={13} />
               </button>
             </div>
@@ -466,7 +580,7 @@ export function BookingsDashboard() {
                   <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden md:table-cell">Program</th>
                   <th className="text-left px-4 py-3.5 font-medium text-muted-foreground">Status</th>
                   <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden lg:table-cell">Date</th>
-                  <th className="px-4 py-3.5" />
+                  <th className="px-4 py-3.5" scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -520,7 +634,6 @@ export function BookingsDashboard() {
     return (
       <div className="space-y-4">
         <div className="grid lg:grid-cols-3 gap-4">
-          {/* Working days */}
           <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6 space-y-5">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -535,12 +648,8 @@ export function BookingsDashboard() {
               {DAYS.map(({ key, label }) => {
                 const active = availability.days.includes(key);
                 return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => toggleDay(key)}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-muted-foreground border-border hover:border-primary/30"}`}
-                  >
+                  <button key={key} type="button" onClick={() => toggleDay(key)}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-muted-foreground border-border hover:border-primary/30"}`}>
                     {label}
                   </button>
                 );
@@ -610,7 +719,6 @@ export function BookingsDashboard() {
             </div>
           </div>
 
-          {/* Live preview */}
           <div className="bg-card border border-border rounded-2xl p-6 space-y-4 h-fit">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -659,7 +767,7 @@ export function BookingsDashboard() {
                       <span key={d} className="inline-flex items-center gap-1 bg-primary/8 text-primary text-xs px-2.5 py-1 rounded-lg">
                         <Calendar size={10} />
                         {fmt(d)}
-                        <button onClick={() => removeProgramDate(prog, d)} className="ml-0.5 text-primary/60 hover:text-red-500 transition-colors">
+                        <button type="button" title={`Remove ${fmt(d)}`} onClick={() => removeProgramDate(prog, d)} className="ml-0.5 text-primary/60 hover:text-red-500 transition-colors">
                           <X size={10} />
                         </button>
                       </span>
@@ -676,6 +784,105 @@ export function BookingsDashboard() {
             );
           })}
         </div>
+      </div>
+    );
+  }
+
+  // ── Programs CMS ─────────────────────────────────────────────────────────────
+
+  function ProgramsContent() {
+    const liveCount = programs.filter((p) => p.status === "active").length;
+    const draftCount = programs.filter((p) => p.status === "draft").length;
+
+    return (
+      <div className="space-y-4">
+        {programs.length > 0 && (
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              {liveCount} live
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gray-400" />
+              {draftCount} draft
+            </span>
+          </div>
+        )}
+
+        {programs.length === 0 ? (
+          <div className="bg-card border border-dashed border-border rounded-2xl p-16 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mx-auto mb-4">
+              <BookOpen size={24} />
+            </div>
+            <h3 className="font-semibold text-foreground mb-1">No programs yet</h3>
+            <p className="text-sm text-muted-foreground mb-5">Add your first program and it'll appear on the website instantly.</p>
+            <Button onClick={openAddProgram} className="bg-primary text-primary-foreground">
+              <Plus size={14} className="mr-1.5" /> Add Program
+            </Button>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            {programs.map((p) => (
+              <div key={p.id} className={`bg-card border rounded-2xl overflow-hidden flex flex-col group transition-shadow hover:shadow-md ${p.status === "draft" ? "border-dashed border-border/70" : "border-border"}`}>
+                {/* Thumbnail */}
+                <div className="aspect-video bg-muted relative overflow-hidden">
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted">
+                      <ImageIcon size={28} className="text-muted-foreground/30" />
+                      <span className="text-xs text-muted-foreground/50">No image</span>
+                    </div>
+                  )}
+                  {/* Status badges */}
+                  <div className="absolute top-2.5 left-2.5 flex gap-1.5">
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${p.status === "active" ? "bg-emerald-500 text-white" : "bg-gray-500 text-white"}`}>
+                      {p.status === "active" ? "Live" : "Draft"}
+                    </span>
+                    {p.enrollmentOpen && p.status === "active" && (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-gold text-white">Enrolling</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="p-4 flex flex-col flex-1">
+                  {p.tag && <p className="text-[11px] uppercase tracking-widest text-gold mb-1 font-medium">{p.tag}</p>}
+                  <h3 className="font-semibold text-foreground text-sm leading-snug mb-1.5">{p.title}</h3>
+                  <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{p.description || <span className="italic">No description</span>}</p>
+
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2.5 mb-3">
+                    {p.duration && <span className="flex items-center gap-1"><Clock size={10} />{p.duration}</span>}
+                    {p.startDate && <span className="flex items-center gap-1"><Calendar size={10} />{fmt(p.startDate)}</span>}
+                    {p.price && <span className="font-medium text-foreground">{p.price}</span>}
+                  </div>
+
+                  <div className="flex gap-2 mt-auto pt-1">
+                    <Button size="sm" variant="outline" className="flex-1 h-8 text-xs gap-1" onClick={() => openEditProgram(p)}>
+                      <Edit3 size={11} /> Edit
+                    </Button>
+                    <button
+                      type="button"
+                      title={p.status === "active" ? "Set to Draft" : "Publish"}
+                      onClick={() => toggleProgramStatus(p)}
+                      className="h-8 px-2.5 rounded-md border border-border text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                    >
+                      {p.status === "active" ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                    <button
+                      type="button"
+                      title="Delete"
+                      onClick={() => deleteProgram(p.id)}
+                      className="h-8 px-2.5 rounded-md border border-border text-xs text-muted-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -697,7 +904,7 @@ export function BookingsDashboard() {
               <a href={`tel:${b.phone}`} className="text-xs text-muted-foreground hover:text-primary">{b.phone}</a>
             </div>
           </div>
-          <button onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
+          <button type="button" title="Close" onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
         </div>
 
         <div className="flex gap-2 p-4 border-b border-border">
@@ -766,13 +973,21 @@ export function BookingsDashboard() {
         </div>
 
         <div className="p-4 border-t border-border">
-          <button onClick={() => deleteBooking(b.id)} className="w-full flex items-center justify-center gap-2 text-sm text-red-600 hover:bg-red-50 py-2 rounded-xl transition-colors border border-transparent hover:border-red-100">
+          <button type="button" onClick={() => deleteBooking(b.id)} className="w-full flex items-center justify-center gap-2 text-sm text-red-600 hover:bg-red-50 py-2 rounded-xl transition-colors border border-transparent hover:border-red-100">
             <Trash2 size={13} /> Delete booking
           </button>
         </div>
       </aside>
     );
   }
+
+  // ── Header title / action helpers ─────────────────────────────────────────────
+
+  const headerTitle = view === "overview" ? "Overview"
+    : view === "bookings" ? "Bookings & Enrollments"
+    : view === "availability" ? "Availability"
+    : view === "schedule" ? "Program Intake Schedule"
+    : "Programs CMS";
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -825,27 +1040,36 @@ export function BookingsDashboard() {
           {/* Top bar */}
           <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
             <div className="flex items-center gap-3">
-              <button className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <button type="button" title="Toggle menu" className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setSidebarOpen(!sidebarOpen)}>
                 <Menu size={20} />
               </button>
               <div>
-                <h1 className="text-base font-semibold text-foreground">
-                  {view === "overview" ? "Overview" : view === "bookings" ? "Bookings & Enrollments" : view === "availability" ? "Availability" : "Program Intake Schedule"}
-                </h1>
-                <p className="text-xs text-muted-foreground">{stats.total} total · {stats.pending} pending</p>
+                <h1 className="text-base font-semibold text-foreground">{headerTitle}</h1>
+                <p className="text-xs text-muted-foreground">
+                  {view === "programs"
+                    ? `${programs.length} program${programs.length !== 1 ? "s" : ""} · ${programs.filter(p => p.status === "active").length} live`
+                    : `${stats.total} total · ${stats.pending} pending`}
+                </p>
               </div>
             </div>
-            <Button onClick={() => setIsAddOpen(true)} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus size={14} className="mr-1.5" /> New Booking
-            </Button>
+            {view === "programs" ? (
+              <Button onClick={openAddProgram} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={14} className="mr-1.5" /> Add Program
+              </Button>
+            ) : (
+              <Button onClick={() => setIsAddOpen(true)} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={14} className="mr-1.5" /> New Booking
+              </Button>
+            )}
           </header>
 
           {/* Page content */}
           <main className="flex-1 overflow-auto p-6">
-            {view === "overview" && <OverviewContent />}
-            {view === "bookings" && <BookingsContent />}
+            {view === "overview"    && <OverviewContent />}
+            {view === "bookings"    && <BookingsContent />}
             {view === "availability" && <AvailabilityContent />}
-            {view === "schedule" && <ScheduleContent />}
+            {view === "schedule"    && <ScheduleContent />}
+            {view === "programs"    && <ProgramsContent />}
           </main>
         </div>
 
@@ -906,6 +1130,139 @@ export function BookingsDashboard() {
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
               <Button onClick={addBooking} className="bg-primary text-primary-foreground hover:bg-primary/90">Create Booking</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit Program Modal */}
+      <Dialog open={isProgramOpen} onOpenChange={(open) => { if (!open) { setIsProgramOpen(false); setProgramEditId(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl" style={{ color: "var(--primary)" }}>
+              {programEditId ? "Edit Program" : "Add New Program"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 pt-1">
+            {/* Title & Tag */}
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2">
+                <Label htmlFor="p-title">Program Title *</Label>
+                <Input id="p-title" placeholder="e.g. The SIRAJ Method™ Certification" value={programForm.title} onChange={(e) => setProgramForm((f) => ({ ...f, title: e.target.value }))} className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="p-tag">Category / Tag</Label>
+                <Input id="p-tag" placeholder="e.g. Signature" value={programForm.tag} onChange={(e) => setProgramForm((f) => ({ ...f, tag: e.target.value }))} className="mt-1" />
+              </div>
+            </div>
+
+            {/* Short description (card) */}
+            <div>
+              <Label htmlFor="p-desc">Short Description <span className="text-muted-foreground font-normal">(shown on cards)</span></Label>
+              <textarea id="p-desc" rows={2} maxLength={250} placeholder="A brief summary visible on the programs listing page…" value={programForm.description} onChange={(e) => setProgramForm((f) => ({ ...f, description: e.target.value }))} className="w-full mt-1 px-3 py-2 text-sm rounded-xl border border-input bg-background focus:outline-none focus:border-primary resize-none" />
+              <p className="text-xs text-muted-foreground mt-0.5 text-right">{programForm.description.length}/250</p>
+            </div>
+
+            {/* Full description (popup) */}
+            <div>
+              <Label htmlFor="p-full">Full Description <span className="text-muted-foreground font-normal">(shown in popup)</span></Label>
+              <textarea id="p-full" rows={5} placeholder="Detailed program overview, what's included, who it's for…" value={programForm.fullDescription} onChange={(e) => setProgramForm((f) => ({ ...f, fullDescription: e.target.value }))} className="w-full mt-1 px-3 py-2 text-sm rounded-xl border border-input bg-background focus:outline-none focus:border-primary resize-none" />
+            </div>
+
+            {/* Duration / Start Date / Price */}
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="p-dur">Duration</Label>
+                <Input id="p-dur" placeholder="e.g. 12 weeks" value={programForm.duration} onChange={(e) => setProgramForm((f) => ({ ...f, duration: e.target.value }))} className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="p-start">Start Date</Label>
+                <Input id="p-start" type="date" value={programForm.startDate} onChange={(e) => setProgramForm((f) => ({ ...f, startDate: e.target.value }))} className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="p-price">Price</Label>
+                <Input id="p-price" placeholder="e.g. ₦150,000" value={programForm.price} onChange={(e) => setProgramForm((f) => ({ ...f, price: e.target.value }))} className="mt-1" />
+              </div>
+            </div>
+
+            {/* Image */}
+            <div>
+              <Label>Cover Image</Label>
+              <div className="mt-1 border border-border rounded-xl overflow-hidden">
+                {/* Tabs */}
+                <div className="flex border-b border-border">
+                  <button type="button" onClick={() => setProgramImageTab("url")} className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium transition-colors ${programImageTab === "url" ? "bg-primary/5 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}>
+                    <LinkIcon size={12} /> Paste URL
+                  </button>
+                  <button type="button" onClick={() => setProgramImageTab("upload")} className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium transition-colors ${programImageTab === "upload" ? "bg-primary/5 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}>
+                    <Upload size={12} /> Upload File
+                  </button>
+                </div>
+
+                <div className="p-3">
+                  {programImageTab === "url" ? (
+                    <Input placeholder="https://…" value={programForm.imageUrl.startsWith("data:") ? "" : programForm.imageUrl} onChange={(e) => setProgramForm((f) => ({ ...f, imageUrl: e.target.value }))} className="text-sm" />
+                  ) : (
+                    <div>
+                      <input ref={fileInputRef} type="file" accept="image/*" aria-label="Upload program cover image" className="hidden" onChange={handleProgramImageFile} />
+                      <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full flex flex-col items-center justify-center gap-2 py-6 border border-dashed border-border rounded-xl text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors text-sm">
+                        <Upload size={20} />
+                        <span>Click to choose image</span>
+                        <span className="text-xs opacity-60">JPG, PNG, WebP · max 3 MB</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Preview */}
+                  {programForm.imageUrl && (
+                    <div className="mt-3 relative rounded-xl overflow-hidden aspect-video bg-muted">
+                      <img src={programForm.imageUrl} alt="Preview" className="w-full h-full object-cover" onError={() => setProgramForm((f) => ({ ...f, imageUrl: "" }))} />
+                      <button type="button" title="Remove image" onClick={() => setProgramForm((f) => ({ ...f, imageUrl: "" }))} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors">
+                        <X size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Status & Enrollment */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="p-status">Status</Label>
+                <Select value={programForm.status} onValueChange={(v: "active" | "draft") => setProgramForm((f) => ({ ...f, status: v }))}>
+                  <SelectTrigger id="p-status" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Live (visible on website)</SelectItem>
+                    <SelectItem value="draft">Draft (hidden from website)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end pb-0.5">
+                <label className="flex items-center gap-3 cursor-pointer mt-6">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={programForm.enrollmentOpen ? "true" : "false"}
+                    onClick={() => setProgramForm((f) => ({ ...f, enrollmentOpen: !f.enrollmentOpen }))}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${programForm.enrollmentOpen ? "bg-primary" : "bg-muted-foreground/30"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${programForm.enrollmentOpen ? "translate-x-5" : ""}`} />
+                  </button>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Enrollment open</p>
+                    <p className="text-xs text-muted-foreground">Shows "Enrolling" badge + Enroll button</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <Button variant="outline" onClick={() => setIsProgramOpen(false)}>Cancel</Button>
+              <Button onClick={saveProgram} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                {programEditId ? "Save Changes" : "Publish Program"}
+              </Button>
             </div>
           </div>
         </DialogContent>

@@ -38,6 +38,28 @@ const Booking = mongoose.model("Booking", bookingSchema);
 const settingSchema = new mongoose.Schema({ _id: String, data: mongoose.Schema.Types.Mixed }, { versionKey: false });
 const Setting = mongoose.model("Setting", settingSchema);
 
+// Programs (CMS)
+const programSchema = new mongoose.Schema({
+  title:           { type: String, required: true },
+  tag:             { type: String, default: "" },
+  description:     { type: String, default: "" },
+  fullDescription: { type: String, default: "" },
+  duration:        { type: String, default: "" },
+  startDate:       { type: String, default: "" },
+  price:           { type: String, default: "" },
+  imageUrl:        { type: String, default: "" },
+  status:          { type: String, default: "active" },   // "active" | "draft"
+  enrollmentOpen:  { type: Boolean, default: true },
+  order:           { type: Number, default: 0 },
+  createdAt:       { type: String, default: () => new Date().toISOString() },
+}, { versionKey: false });
+
+programSchema.set("toJSON", {
+  transform: (_doc, ret) => { ret.id = ret._id.toString(); delete ret._id; return ret; },
+});
+
+const ProgramModel = mongoose.model("Program", programSchema);
+
 const DEFAULT_AVAILABILITY = {
   days: ["mon", "tue", "wed", "thu", "fri"],
   startTime: "09:00",
@@ -128,6 +150,39 @@ app.put("/api/program-dates", async (req, res) => {
   try {
     res.json(await setSetting("programDates", req.body));
   } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// ─── Programs ─────────────────────────────────────────────────────────────────
+
+app.get("/api/programs", async (req, res) => {
+  try {
+    const filter = req.query.all === "true" ? {} : { status: "active" };
+    const programs = await ProgramModel.find(filter).sort({ order: 1, createdAt: -1 });
+    res.json(programs);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/programs", async (req, res) => {
+  try {
+    const program = await ProgramModel.create(req.body);
+    res.status(201).json(program);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.patch("/api/programs/:id", async (req, res) => {
+  try {
+    const program = await ProgramModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!program) return res.status(404).json({ error: "Not found" });
+    res.json(program);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.delete("/api/programs/:id", async (req, res) => {
+  try {
+    const result = await ProgramModel.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
