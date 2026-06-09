@@ -10,9 +10,10 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
+mongoose.set("bufferCommands", false);
+mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 15000 })
   .then(() => console.log("MongoDB connected"))
-  .catch((e) => console.error("MongoDB connection error (server still running):", e.message));
+  .catch((e) => console.error("MongoDB connection error:", e.message));
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
