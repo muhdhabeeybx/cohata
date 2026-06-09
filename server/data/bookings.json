@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "1780999519989",
+    "createdAt": "2026-06-09T10:05:19.989Z",
+    "name": "Test Client",
+    "phone": "+234 800 000 0000",
+    "program": "Discovery Session",
+    "status": "Scheduled",
+    "sessionDate": "2026-06-15",
+    "sessionTime": "09:00"
+  }
+]
