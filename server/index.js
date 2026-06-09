@@ -10,7 +10,9 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-mongoose.connect(MONGO_URI).then(() => console.log("MongoDB connected")).catch((e) => { console.error(e); process.exit(1); });
+mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
+  .then(() => console.log("MongoDB connected"))
+  .catch((e) => console.error("MongoDB connection error (server still running):", e.message));
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -88,7 +90,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : ["http://localhost:8080", "http://localhost:3000"];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

@@ -13,9 +13,16 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Route all requests through the SSR function.
-# Static files in dist/client are served by Netlify's CDN first (before this redirect applies),
-# so assets, JS, CSS are served directly. Only paths without a matching file hit the function.
+# Proxy /api/* to the Render backend — must come before the SSR catch-all.
+# This avoids needing VITE_API_URL and keeps all requests same-origin.
+[[redirects]]
+  from = "/api/*"
+  to = "https://cohata.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# Route all other requests through the SSR function.
+# Static files in dist/client are served directly by Netlify's CDN first.
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/server"
