@@ -476,7 +476,7 @@ export function BookingsDashboard() {
         <div className="bg-primary text-primary-foreground rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
           <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_85%_20%,white,transparent_45%)]" />
           <div className="relative">
-            <p className="text-xs uppercase tracking-[0.2em] text-gold">
+            <p className="text-xs uppercase tracking-[0.2em] text-gold" suppressHydrationWarning>
               {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
             </p>
             <h2 className="font-display text-2xl mt-1">Welcome back, Coach Halima</h2>

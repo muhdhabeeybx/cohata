@@ -70,7 +70,7 @@ export function SiteFooter() {
         </div>
 
         <div className="border-t border-primary-foreground/15 pt-8 flex flex-col md:flex-row justify-between gap-4 text-sm text-primary-foreground/60">
-          <p>© {new Date().getFullYear()} COHATA — Coach Halima Transformational Academy.</p>
+          <p suppressHydrationWarning>© {new Date().getFullYear()} COHATA — Coach Halima Transformational Academy.</p>
           <p className="font-display italic">In every reflection, an invitation to return.</p>
         </div>
       </div>
