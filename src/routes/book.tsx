@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
-import { useState } from "react";
-import { Check, Calendar, Clock } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Calendar, Clock, CalendarOff } from "lucide-react";
+import type { Availability, Booking } from "@/components/BookingsDashboard";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/book")({
   component: Book,
@@ -24,7 +26,37 @@ const sessionTypes = [
   { id: "hijama", name: "Hijama Therapy", duration: "45 min", desc: "Traditional cupping wellness session." },
 ];
 
-const times = ["09:00", "10:30", "13:00", "15:00", "17:00", "19:00"];
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const DAY_LABELS: Record<string, string> = { sun: "Sunday", mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday" };
+
+const DEFAULT_AVAILABILITY: Availability = {
+  days: ["mon", "tue", "wed", "thu", "fri"],
+  startTime: "09:00",
+  endTime: "17:00",
+  slotMinutes: 60,
+  blockedDates: [],
+};
+
+function dayKeyOf(dateStr: string) {
+  return DAY_KEYS[new Date(`${dateStr}T00:00:00`).getDay()];
+}
+
+function generateSlots(av: Availability) {
+  const [sh, sm] = av.startTime.split(":").map(Number);
+  const [eh, em] = av.endTime.split(":").map(Number);
+  const slots: string[] = [];
+  let cur = sh * 60 + sm;
+  const end = eh * 60 + em;
+  while (cur + av.slotMinutes <= end) {
+    const hh = String(Math.floor(cur / 60)).padStart(2, "0");
+    const mm = String(cur % 60).padStart(2, "0");
+    slots.push(`${hh}:${mm}`);
+    cur += av.slotMinutes;
+  }
+  return slots;
+}
+
+const ACTIVE_STATUSES = ["Pending", "Approved", "Scheduled", "In Progress"];
 
 function Book() {
   const [step, setStep] = useState(1);
@@ -33,9 +65,31 @@ function Book() {
   const [time, setTime] = useState<string | null>(null);
   const [info, setInfo] = useState({ name: "", email: "", phone: "", note: "" });
   const [done, setDone] = useState(false);
+  const [availability, setAvailability] = useState<Availability>(DEFAULT_AVAILABILITY);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      api.get<Availability>("/api/availability").then((a) => setAvailability({ ...DEFAULT_AVAILABILITY, ...a })),
+      api.get<Booking[]>("/api/bookings").then(setBookings),
+    ]).catch(console.error);
+  }, []);
 
   const selectedType = sessionTypes.find((s) => s.id === type);
   const minDate = new Date().toISOString().split("T")[0];
+
+  const dayKey = date ? dayKeyOf(date) : null;
+  const isWorkingDay = dayKey ? availability.days.includes(dayKey) : false;
+  const isBlocked = date ? availability.blockedDates.includes(date) : false;
+  const dayUnavailable = !!date && (!isWorkingDay || isBlocked);
+
+  const availableTimes = useMemo(() => {
+    if (!date || dayUnavailable) return [];
+    const taken = new Set(
+      bookings.filter((b) => b.sessionDate === date && ACTIVE_STATUSES.includes(b.status)).map((b) => b.sessionTime)
+    );
+    return generateSlots(availability).filter((t) => !taken.has(t));
+  }, [date, dayUnavailable, bookings, availability]);
 
   return (
     <Layout>
@@ -79,6 +133,7 @@ function Book() {
               <div className="grid md:grid-cols-2 gap-4">
                 {sessionTypes.map((s) => (
                   <button
+                    type="button"
                     key={s.id}
                     onClick={() => setType(s.id)}
                     className={`text-left p-5 rounded-2xl border-2 transition ${type === s.id ? "border-primary bg-accent" : "border-border hover:border-primary/40"}`}
@@ -92,57 +147,78 @@ function Book() {
                 ))}
               </div>
               <div className="flex justify-end mt-8">
-                <button disabled={!type} onClick={() => setStep(2)} className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium disabled:opacity-40">
+                <button type="button" disabled={!type} onClick={() => setStep(2)} className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium disabled:opacity-40">
                   Continue
                 </button>
               </div>
             </>
           ) : step === 2 ? (
             <>
-              <h2 className="font-display text-2xl text-primary mb-6">Pick date & time</h2>
+              <h2 className="font-display text-2xl text-primary mb-2">Pick date & time</h2>
+              <p className="text-sm text-foreground/60 mb-6">
+                We're available {availability.days.map((d) => DAY_LABELS[d]).join(", ")}, {availability.startTime}–{availability.endTime}.
+              </p>
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <label className="text-sm text-muted-foreground mb-2 flex items-center gap-2"><Calendar size={14} />Date</label>
-                  <input type="date" min={minDate} value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-5 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary" />
+                  <label htmlFor="pick-date" className="text-sm text-muted-foreground mb-2 flex items-center gap-2"><Calendar size={14} />Date</label>
+                  <input
+                    id="pick-date"
+                    type="date"
+                    min={minDate}
+                    value={date}
+                    onChange={(e) => { setDate(e.target.value); setTime(null); }}
+                    className="w-full px-5 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary"
+                  />
+                  {dayUnavailable && (
+                    <p className="mt-3 text-sm text-destructive flex items-center gap-2">
+                      <CalendarOff size={14} /> We're not available on this date — please pick another day.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-2 flex items-center gap-2"><Clock size={14} />Time</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {times.map((t) => (
-                      <button key={t} onClick={() => setTime(t)} className={`py-3 rounded-xl border text-sm transition ${time === t ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"}`}>
-                        {t}
-                      </button>
-                    ))}
-                  </div>
+                  {!date ? (
+                    <p className="text-sm text-muted-foreground py-3">Choose a date to see available times.</p>
+                  ) : dayUnavailable ? (
+                    <p className="text-sm text-muted-foreground py-3">No sessions run on this day.</p>
+                  ) : availableTimes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-3">This day is fully booked — try another date.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {availableTimes.map((t) => (
+                        <button type="button" key={t} onClick={() => setTime(t)} className={`py-3 rounded-xl border text-sm transition ${time === t ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40"}`}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex justify-between mt-8">
-                <button onClick={() => setStep(1)} className="px-6 py-3 text-foreground/70">Back</button>
-                <button disabled={!date || !time} onClick={() => setStep(3)} className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium disabled:opacity-40">Continue</button>
+                <button type="button" onClick={() => setStep(1)} className="px-6 py-3 text-foreground/70">Back</button>
+                <button type="button" disabled={!date || !time || dayUnavailable} onClick={() => setStep(3)} className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium disabled:opacity-40">Continue</button>
               </div>
             </>
           ) : (
-            <form onSubmit={(e) => {
-            e.preventDefault();
-            // Save to admin dashboard
-            try {
-              const existing = JSON.parse(localStorage.getItem("cohata_bookings") ?? "[]");
-              const entry = {
-                id: Date.now().toString(),
-                name: info.name,
-                phone: info.phone,
-                program: selectedType?.name ?? type ?? "",
-                status: "Pending",
-                enrollmentDate: date,
-                sessionDate: date,
-                sessionTime: time ?? "",
-                notes: info.note,
-                createdAt: new Date().toISOString(),
-              };
-              localStorage.setItem("cohata_bookings", JSON.stringify([entry, ...existing]));
-            } catch {}
-            setDone(true);
-          }}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await api.post("/api/bookings", {
+                  name: info.name,
+                  phone: info.phone,
+                  email: info.email,
+                  program: selectedType?.name ?? type ?? "",
+                  status: "Pending",
+                  enrollmentDate: date,
+                  sessionDate: date,
+                  sessionTime: time ?? "",
+                  notes: info.note,
+                });
+                setDone(true);
+              } catch {
+                alert("Something went wrong — please try again.");
+              }
+            }}>
               <h2 className="font-display text-2xl text-primary mb-6">Your details</h2>
               <div className="space-y-4">
                 <input required placeholder="Full name" value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} className="w-full px-5 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary" />

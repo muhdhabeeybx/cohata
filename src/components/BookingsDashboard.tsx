@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { api } from "@/lib/api";
 import {
   LayoutDashboard,
   Users,
@@ -21,6 +22,10 @@ import {
   ChevronRight,
   TrendingUp,
   Inbox,
+  Clock,
+  CalendarOff,
+  CalendarCheck,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,9 +64,39 @@ interface ProgramDates {
   [program: string]: string[];
 }
 
-type View = "overview" | "bookings" | "schedule";
+export interface Availability {
+  days: string[];           // e.g. ["mon","tue","wed","thu","fri"]
+  startTime: string;        // "09:00"
+  endTime: string;          // "17:00"
+  slotMinutes: number;      // 60
+  blockedDates: string[];   // ["2026-12-25", ...] — days off entirely
+}
+
+type View = "overview" | "bookings" | "availability" | "schedule";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+const DAYS = [
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+  { key: "sat", label: "Sat" },
+  { key: "sun", label: "Sun" },
+];
+
+const DAY_LABELS_SHORT: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+
+const SLOT_LENGTHS = [30, 45, 60, 75, 90, 120];
+
+const DEFAULT_AVAILABILITY: Availability = {
+  days: ["mon", "tue", "wed", "thu", "fri"],
+  startTime: "09:00",
+  endTime: "17:00",
+  slotMinutes: 60,
+  blockedDates: [],
+};
 
 const PROGRAMS = [
   "Discovery Session",
@@ -102,9 +137,10 @@ const STATUS_CFG: Record<
 };
 
 const NAV = [
-  { id: "overview" as View, label: "Overview",  Icon: LayoutDashboard },
-  { id: "bookings" as View, label: "Bookings",  Icon: Users },
-  { id: "schedule" as View, label: "Schedule",  Icon: CalendarDays },
+  { id: "overview" as View,     label: "Overview",      Icon: LayoutDashboard },
+  { id: "bookings" as View,     label: "Bookings",      Icon: Users },
+  { id: "availability" as View, label: "Availability",  Icon: Clock },
+  { id: "schedule" as View,     label: "Program Intake",Icon: CalendarDays },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -137,6 +173,27 @@ function waUrl(phone: string) {
   return `https://wa.me/${phone.replace(/\D/g, "")}`;
 }
 
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+function dayKeyOf(dateStr: string) {
+  return DAY_KEYS[new Date(`${dateStr}T00:00:00`).getDay()];
+}
+
+function generateSlots(av: Availability) {
+  const [sh, sm] = av.startTime.split(":").map(Number);
+  const [eh, em] = av.endTime.split(":").map(Number);
+  const slots: string[] = [];
+  let cur = sh * 60 + sm;
+  const end = eh * 60 + em;
+  while (cur + av.slotMinutes <= end) {
+    const hh = String(Math.floor(cur / 60)).padStart(2, "0");
+    const mm = String(cur % 60).padStart(2, "0");
+    slots.push(`${hh}:${mm}`);
+    cur += av.slotMinutes;
+  }
+  return slots;
+}
+
 function emptyForm() {
   return { name: "", phone: "", program: "", status: "Pending", enrollmentDate: new Date().toISOString().split("T")[0], sessionDate: "", sessionTime: "", notes: "" };
 }
@@ -148,6 +205,8 @@ export function BookingsDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [programDates, setProgramDates] = useState<ProgramDates>({});
+  const [availability, setAvailability] = useState<Availability>(DEFAULT_AVAILABILITY);
+  const [blockedDateInput, setBlockedDateInput] = useState("");
   const [selected, setSelected] = useState<Booking | null>(null);
   const [filterStatus, setFilterStatus] = useState("All");
   const [search, setSearch] = useState("");
@@ -156,52 +215,90 @@ export function BookingsDashboard() {
   const [tempNotes, setTempNotes] = useState("");
   const [dateInputs, setDateInputs] = useState<Record<string, string>>({});
   const [form, setForm] = useState(emptyForm());
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const b = localStorage.getItem("cohata_bookings");
-    if (b) setBookings(JSON.parse(b));
-    const d = localStorage.getItem("cohata_program_dates");
-    if (d) setProgramDates(JSON.parse(d));
+  const refreshAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [b, d, a] = await Promise.all([
+        api.get<Booking[]>("/api/bookings"),
+        api.get<ProgramDates>("/api/program-dates"),
+        api.get<Availability>("/api/availability"),
+      ]);
+      setBookings(b);
+      setProgramDates(d);
+      setAvailability({ ...DEFAULT_AVAILABILITY, ...a });
+    } catch (err) {
+      console.error("Failed to load data:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const persist = (b: Booking[]) => {
-    setBookings(b);
-    localStorage.setItem("cohata_bookings", JSON.stringify(b));
+  useEffect(() => { refreshAll(); }, [refreshAll]);
+
+  const persistAvailability = async (a: Availability) => {
+    setAvailability(a);
+    await api.put("/api/availability", a).catch(console.error);
   };
 
-  const persistDates = (d: ProgramDates) => {
+  const persistDates = async (d: ProgramDates) => {
     setProgramDates(d);
-    localStorage.setItem("cohata_program_dates", JSON.stringify(d));
+    await api.put("/api/program-dates", d).catch(console.error);
   };
 
-  const updateStatus = (id: string, status: string) => {
-    const updated = bookings.map((b) => (b.id === id ? { ...b, status } : b));
-    persist(updated);
+  const toggleDay = (key: string) => {
+    const days = availability.days.includes(key)
+      ? availability.days.filter((d) => d !== key)
+      : [...availability.days, key];
+    persistAvailability({ ...availability, days });
+  };
+
+  const addBlockedDate = () => {
+    if (!blockedDateInput) return;
+    if (!availability.blockedDates.includes(blockedDateInput)) {
+      persistAvailability({ ...availability, blockedDates: [...availability.blockedDates, blockedDateInput].sort() });
+    }
+    setBlockedDateInput("");
+  };
+
+  const removeBlockedDate = (date: string) => {
+    persistAvailability({ ...availability, blockedDates: availability.blockedDates.filter((d) => d !== date) });
+  };
+
+  const updateStatus = async (id: string, status: string) => {
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
     setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+    await api.patch(`/api/bookings/${id}`, { status }).catch(console.error);
   };
 
-  const saveNotes = (id: string) => {
-    const updated = bookings.map((b) => (b.id === id ? { ...b, notes: tempNotes } : b));
-    persist(updated);
+  const saveNotes = async (id: string) => {
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, notes: tempNotes } : b)));
     setSelected((prev) => (prev?.id === id ? { ...prev, notes: tempNotes } : prev));
     setEditingNotes(false);
+    await api.patch(`/api/bookings/${id}`, { notes: tempNotes }).catch(console.error);
   };
 
-  const deleteBooking = (id: string) => {
+  const deleteBooking = async (id: string) => {
     if (!confirm("Delete this booking? This cannot be undone.")) return;
-    persist(bookings.filter((b) => b.id !== id));
+    setBookings((prev) => prev.filter((b) => b.id !== id));
     if (selected?.id === id) setSelected(null);
+    await api.del(`/api/bookings/${id}`).catch(console.error);
   };
 
-  const addBooking = () => {
+  const addBooking = async () => {
     if (!form.name || !form.phone || !form.program) {
       alert("Name, phone, and program are required.");
       return;
     }
-    const nb: Booking = { id: Date.now().toString(), createdAt: new Date().toISOString(), ...form };
-    persist([nb, ...bookings]);
-    setIsAddOpen(false);
-    setForm(emptyForm());
+    try {
+      const nb = await api.post<Booking>("/api/bookings", form);
+      setBookings((prev) => [nb, ...prev]);
+      setIsAddOpen(false);
+      setForm(emptyForm());
+    } catch {
+      alert("Failed to save booking. Is the API server running?");
+    }
   };
 
   const addProgramDate = (program: string) => {
@@ -232,11 +329,35 @@ export function BookingsDashboard() {
 
   const recent = [...bookings].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
 
+  const today = new Date().toISOString().split("T")[0];
+  const upcoming = [...bookings]
+    .filter((b) => b.sessionDate && b.sessionDate >= today && ["Approved", "Scheduled"].includes(b.status))
+    .sort((a, b) => `${a.sessionDate}T${a.sessionTime ?? ""}`.localeCompare(`${b.sessionDate}T${b.sessionTime ?? ""}`))
+    .slice(0, 6);
+
   // ── Overview ─────────────────────────────────────────────────────────────────
 
   function OverviewContent() {
+    const slotsPerDay = generateSlots(availability).length;
     return (
       <div className="space-y-6">
+        <div className="bg-primary text-primary-foreground rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_85%_20%,white,transparent_45%)]" />
+          <div className="relative">
+            <p className="text-xs uppercase tracking-[0.2em] text-gold">
+              {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+            </p>
+            <h2 className="font-display text-2xl mt-1">Welcome back, Coach Halima</h2>
+            <p className="text-sm text-primary-foreground/70 mt-1 flex items-center gap-2">
+              <Clock size={13} />
+              Available {availability.days.map((d) => DAY_LABELS_SHORT[d]).join(" · ")} · {availability.startTime}–{availability.endTime} · {slotsPerDay} session{slotsPerDay !== 1 ? "s" : ""}/day
+            </p>
+          </div>
+          <button type="button" onClick={() => setView("availability")} className="relative inline-flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/15 transition-colors border border-primary-foreground/15 w-fit">
+            <Settings2 size={14} /> Manage availability
+          </button>
+        </div>
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: "Total Bookings", value: stats.total, Icon: Inbox, color: "text-foreground", bg: "bg-card" },
@@ -256,29 +377,59 @@ export function BookingsDashboard() {
           ))}
         </div>
 
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h2 className="font-semibold text-foreground">Recent Bookings</h2>
-            <button onClick={() => setView("bookings")} className="text-xs text-primary flex items-center gap-1 hover:gap-2 transition-all">
-              View all <ChevronRight size={13} />
-            </button>
-          </div>
-          <div className="divide-y divide-border">
-            {recent.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-sm">No bookings yet. Click "New Booking" to add one.</div>
-            ) : (
-              recent.map((b) => (
-                <div key={b.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => { setSelected(b); setView("bookings"); }}>
-                  <Avatar name={b.name} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-foreground truncate">{b.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{b.program}</p>
+        <div className="grid lg:grid-cols-2 gap-4">
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Recent Bookings</h2>
+              <button onClick={() => setView("bookings")} className="text-xs text-primary flex items-center gap-1 hover:gap-2 transition-all">
+                View all <ChevronRight size={13} />
+              </button>
+            </div>
+            <div className="divide-y divide-border">
+              {recent.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground text-sm">No bookings yet. Click "New Booking" to add one.</div>
+              ) : (
+                recent.map((b) => (
+                  <div key={b.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => { setSelected(b); setView("bookings"); }}>
+                    <Avatar name={b.name} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-foreground truncate">{b.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{b.program}</p>
+                    </div>
+                    <StatusBadge status={b.status} />
+                    <p className="text-xs text-muted-foreground hidden sm:block whitespace-nowrap">{fmt(b.enrollmentDate)}</p>
                   </div>
-                  <StatusBadge status={b.status} />
-                  <p className="text-xs text-muted-foreground hidden sm:block whitespace-nowrap">{fmt(b.enrollmentDate)}</p>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="font-semibold text-foreground flex items-center gap-2"><CalendarCheck size={16} className="text-primary" /> Upcoming Sessions</h2>
+              <button onClick={() => setView("availability")} className="text-xs text-primary flex items-center gap-1 hover:gap-2 transition-all">
+                Availability <ChevronRight size={13} />
+              </button>
+            </div>
+            <div className="divide-y divide-border">
+              {upcoming.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground text-sm">No approved sessions scheduled yet.</div>
+              ) : (
+                upcoming.map((b) => (
+                  <div key={b.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-muted/40 cursor-pointer transition-colors" onClick={() => { setSelected(b); setView("bookings"); }}>
+                    <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex flex-col items-center justify-center flex-shrink-0 leading-none">
+                      <span className="text-[10px] uppercase font-medium">{b.sessionDate ? new Date(b.sessionDate).toLocaleDateString("en-GB", { month: "short" }) : "—"}</span>
+                      <span className="text-sm font-bold">{b.sessionDate ? new Date(b.sessionDate).getDate() : "–"}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-foreground truncate">{b.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{b.program}</p>
+                    </div>
+                    <p className="text-xs font-medium text-foreground whitespace-nowrap flex items-center gap-1"><Clock size={11} className="text-muted-foreground" />{b.sessionTime ?? "—"}</p>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -356,6 +507,133 @@ export function BookingsDashboard() {
               {filtered.length} of {bookings.length} booking{bookings.length !== 1 ? "s" : ""}
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Availability ──────────────────────────────────────────────────────────────
+
+  function AvailabilityContent() {
+    const previewSlots = generateSlots(availability);
+
+    return (
+      <div className="space-y-4">
+        <div className="grid lg:grid-cols-3 gap-4">
+          {/* Working days */}
+          <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6 space-y-5">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <CalendarCheck size={16} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Working Days</h3>
+                <p className="text-xs text-muted-foreground">Choose the days clients can book sessions with you.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {DAYS.map(({ key, label }) => {
+                const active = availability.days.includes(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleDay(key)}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${active ? "bg-primary text-primary-foreground border-primary" : "bg-muted/40 text-muted-foreground border-border hover:border-primary/30"}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="h-px bg-border" />
+
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <Clock size={16} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Working Hours & Session Length</h3>
+                <p className="text-xs text-muted-foreground">Sessions are auto-generated as back-to-back slots within these hours.</p>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="av-start">Start time</Label>
+                <Input id="av-start" type="time" className="mt-1" value={availability.startTime} onChange={(e) => persistAvailability({ ...availability, startTime: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="av-end">End time</Label>
+                <Input id="av-end" type="time" className="mt-1" value={availability.endTime} onChange={(e) => persistAvailability({ ...availability, endTime: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="av-slot">Session length</Label>
+                <Select value={String(availability.slotMinutes)} onValueChange={(v) => persistAvailability({ ...availability, slotMinutes: Number(v) })}>
+                  <SelectTrigger id="av-slot" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SLOT_LENGTHS.map((m) => <SelectItem key={m} value={String(m)}>{m} minutes</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="h-px bg-border" />
+
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+                <CalendarOff size={16} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Days Off / Blocked Dates</h3>
+                <p className="text-xs text-muted-foreground">Block specific dates — holidays, leave, or fully booked days.</p>
+              </div>
+            </div>
+            {availability.blockedDates.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {availability.blockedDates.map((d) => (
+                  <span key={d} className="inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 text-xs px-2.5 py-1 rounded-lg">
+                    <CalendarOff size={10} />
+                    {fmt(d)}
+                    <button type="button" title={`Unblock ${fmt(d)}`} onClick={() => removeBlockedDate(d)} className="ml-0.5 text-red-500/60 hover:text-red-600 transition-colors">
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input type="date" className="h-9 text-sm max-w-[200px]" value={blockedDateInput} onChange={(e) => setBlockedDateInput(e.target.value)} min={new Date().toISOString().split("T")[0]} />
+              <Button size="sm" variant="outline" className="h-9 px-3 text-red-600 border-red-200 hover:bg-red-50" onClick={addBlockedDate}>
+                <Plus size={13} className="mr-1" /> Block date
+              </Button>
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4 h-fit">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Settings2 size={16} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Daily Slot Preview</h3>
+                <p className="text-xs text-muted-foreground">What clients will see on a working day</p>
+              </div>
+            </div>
+            {previewSlots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Adjust your hours — no slots fit with the current session length.</p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {previewSlots.map((s) => (
+                  <span key={s} className="text-center text-xs font-medium px-2 py-2 rounded-lg bg-primary/8 text-primary border border-primary/15">{s}</span>
+                ))}
+              </div>
+            )}
+            <div className="text-xs text-muted-foreground bg-muted/40 rounded-xl p-3 leading-relaxed">
+              <strong className="text-foreground">{previewSlots.length}</strong> session{previewSlots.length !== 1 ? "s" : ""} per working day · automatically hidden once booked, declined or cancelled bookings free the slot back up.
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -500,6 +778,14 @@ export function BookingsDashboard() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--background)", fontFamily: "var(--font-sans)" }}>
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar */}
       <aside
@@ -544,7 +830,7 @@ export function BookingsDashboard() {
               </button>
               <div>
                 <h1 className="text-base font-semibold text-foreground">
-                  {view === "overview" ? "Overview" : view === "bookings" ? "Bookings & Enrollments" : "Program Schedule"}
+                  {view === "overview" ? "Overview" : view === "bookings" ? "Bookings & Enrollments" : view === "availability" ? "Availability" : "Program Intake Schedule"}
                 </h1>
                 <p className="text-xs text-muted-foreground">{stats.total} total · {stats.pending} pending</p>
               </div>
@@ -558,6 +844,7 @@ export function BookingsDashboard() {
           <main className="flex-1 overflow-auto p-6">
             {view === "overview" && <OverviewContent />}
             {view === "bookings" && <BookingsContent />}
+            {view === "availability" && <AvailabilityContent />}
             {view === "schedule" && <ScheduleContent />}
           </main>
         </div>

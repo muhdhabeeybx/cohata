@@ -5,6 +5,9 @@
 [build.environment]
   NODE_VERSION = "20"
   NETLIFY = "true"
+  # Set VITE_API_URL in the Netlify dashboard → Site settings → Environment variables
+  # Value: https://cohata-api.onrender.com  (your Render service URL)
+  # VITE_API_URL = "https://cohata-api.onrender.com"
 
 [functions]
   directory = "netlify/functions"
