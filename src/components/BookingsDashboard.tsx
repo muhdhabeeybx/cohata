@@ -258,18 +258,18 @@ export function BookingsDashboard() {
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [b, d, a, progs] = await Promise.all([
+      const [b, d, a, progs] = await Promise.allSettled([
         api.get<Booking[]>("/api/bookings"),
         api.get<ProgramDates>("/api/program-dates"),
         api.get<Availability>("/api/availability"),
         api.get<Program[]>("/api/programs?all=true"),
       ]);
-      setBookings(b);
-      setProgramDates(d);
-      setAvailability({ ...DEFAULT_AVAILABILITY, ...a });
-      setPrograms(progs);
-    } catch (err) {
-      console.error("Failed to load data:", err);
+      if (b.status === "fulfilled") setBookings(b.value);
+      if (d.status === "fulfilled") setProgramDates(d.value);
+      if (a.status === "fulfilled") setAvailability({ ...DEFAULT_AVAILABILITY, ...a.value });
+      if (progs.status === "fulfilled") setPrograms(progs.value);
+      const errors = [b, d, a, progs].filter((r) => r.status === "rejected");
+      if (errors.length) console.warn("Some dashboard data failed to load:", errors.map((r) => (r as PromiseRejectedResult).reason?.message));
     } finally {
       setLoading(false);
     }

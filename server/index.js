@@ -86,11 +86,9 @@ async function setSetting(key, data) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim())
-  : ["http://localhost:8080", "http://localhost:3000"];
-
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+// Open CORS — Netlify proxy is the auth boundary on the deployed site;
+// here we accept all origins so cohatacademy.com and localhost both work.
+app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
