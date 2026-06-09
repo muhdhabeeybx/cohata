@@ -1,111 +1,135 @@
 import express from "express";
 import cors from "cors";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import mongoose from "mongoose";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, "data");
+// ─── DB connection ────────────────────────────────────────────────────────────
 
-if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-
-// ─── File-backed in-memory store ─────────────────────────────────────────────
-
-function loadJson(file, fallback) {
-  try {
-    return JSON.parse(readFileSync(join(DATA_DIR, file), "utf8"));
-  } catch {
-    return fallback;
-  }
+const MONGO_URI = process.env.MONGODB_URI;
+if (!MONGO_URI) {
+  console.error("MONGODB_URI env var is required");
+  process.exit(1);
 }
 
-function saveJson(file, data) {
-  writeFileSync(join(DATA_DIR, file), JSON.stringify(data, null, 2));
-}
+mongoose.connect(MONGO_URI).then(() => console.log("MongoDB connected")).catch((e) => { console.error(e); process.exit(1); });
 
-let bookings = loadJson("bookings.json", []);
-let availability = loadJson("availability.json", {
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+const bookingSchema = new mongoose.Schema({
+  name:           { type: String, required: true },
+  phone:          { type: String, required: true },
+  email:          String,
+  program:        { type: String, required: true },
+  status:         { type: String, default: "Pending" },
+  enrollmentDate: String,
+  sessionDate:    String,
+  sessionTime:    String,
+  notes:          String,
+  createdAt:      { type: String, default: () => new Date().toISOString() },
+}, { versionKey: false });
+
+// Transform _id → id in every JSON response
+bookingSchema.set("toJSON", {
+  transform: (_doc, ret) => { ret.id = ret._id.toString(); delete ret._id; return ret; },
+});
+
+const Booking = mongoose.model("Booking", bookingSchema);
+
+// Availability and ProgramDates are singleton documents (one per collection)
+const settingSchema = new mongoose.Schema({ _id: String, data: mongoose.Schema.Types.Mixed }, { versionKey: false });
+const Setting = mongoose.model("Setting", settingSchema);
+
+const DEFAULT_AVAILABILITY = {
   days: ["mon", "tue", "wed", "thu", "fri"],
   startTime: "09:00",
   endTime: "17:00",
   slotMinutes: 60,
   blockedDates: [],
-});
-let programDates = loadJson("program-dates.json", {});
+};
 
-// ─── App setup ────────────────────────────────────────────────────────────────
+async function getSetting(key, fallback) {
+  const doc = await Setting.findById(key);
+  return doc ? doc.data : fallback;
+}
+
+async function setSetting(key, data) {
+  await Setting.findByIdAndUpdate(key, { data }, { upsert: true, new: true });
+  return data;
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
+  ? process.env.ALLOWED_ORIGINS.split(",").map((s) => s.trim())
   : ["http://localhost:8080", "http://localhost:3000"];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
-// Health check
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 // ─── Bookings ─────────────────────────────────────────────────────────────────
 
-app.get("/api/bookings", (_req, res) => {
-  res.json(bookings);
+app.get("/api/bookings", async (_req, res) => {
+  try {
+    const bookings = await Booking.find().sort({ createdAt: -1 });
+    res.json(bookings);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/bookings", (req, res) => {
-  const booking = {
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString(),
-    ...req.body,
-  };
-  bookings = [booking, ...bookings];
-  saveJson("bookings.json", bookings);
-  res.status(201).json(booking);
+app.post("/api/bookings", async (req, res) => {
+  try {
+    const booking = await Booking.create(req.body);
+    res.status(201).json(booking);
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-app.patch("/api/bookings/:id", (req, res) => {
-  const idx = bookings.findIndex((b) => b.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: "Not found" });
-  bookings[idx] = { ...bookings[idx], ...req.body };
-  saveJson("bookings.json", bookings);
-  res.json(bookings[idx]);
+app.patch("/api/bookings/:id", async (req, res) => {
+  try {
+    const booking = await Booking.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!booking) return res.status(404).json({ error: "Not found" });
+    res.json(booking);
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-app.delete("/api/bookings/:id", (req, res) => {
-  const before = bookings.length;
-  bookings = bookings.filter((b) => b.id !== req.params.id);
-  if (bookings.length === before) return res.status(404).json({ error: "Not found" });
-  saveJson("bookings.json", bookings);
-  res.json({ ok: true });
+app.delete("/api/bookings/:id", async (req, res) => {
+  try {
+    const result = await Booking.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json({ ok: true });
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // ─── Availability ─────────────────────────────────────────────────────────────
 
-app.get("/api/availability", (_req, res) => {
-  res.json(availability);
+app.get("/api/availability", async (_req, res) => {
+  try {
+    res.json(await getSetting("availability", DEFAULT_AVAILABILITY));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put("/api/availability", (req, res) => {
-  availability = { ...availability, ...req.body };
-  saveJson("availability.json", availability);
-  res.json(availability);
+app.put("/api/availability", async (req, res) => {
+  try {
+    res.json(await setSetting("availability", req.body));
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // ─── Program dates ────────────────────────────────────────────────────────────
 
-app.get("/api/program-dates", (_req, res) => {
-  res.json(programDates);
+app.get("/api/program-dates", async (_req, res) => {
+  try {
+    res.json(await getSetting("programDates", {}));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put("/api/program-dates", (req, res) => {
-  programDates = req.body;
-  saveJson("program-dates.json", programDates);
-  res.json(programDates);
+app.put("/api/program-dates", async (req, res) => {
+  try {
+    res.json(await setSetting("programDates", req.body));
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`COHATA API running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`COHATA API running on port ${PORT}`));

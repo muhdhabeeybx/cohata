@@ -8,9 +8,7 @@ services:
     envVars:
       - key: PORT
         value: 3001
+      - key: MONGODB_URI
+        sync: false   # set this manually in the Render dashboard
       - key: ALLOWED_ORIGINS
-        value: https://your-site.netlify.app  # ← replace with your Netlify URL
-    disk:
-      name: cohata-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
+        sync: false   # set to your Netlify URL, e.g. https://your-site.netlify.app
