@@ -153,6 +153,20 @@ app.put("/api/program-dates", async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
+// ─── Maintenance mode ─────────────────────────────────────────────────────────
+
+app.get("/api/maintenance", async (_req, res) => {
+  try {
+    res.json(await getSetting("maintenance", { enabled: false }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/maintenance", async (req, res) => {
+  try {
+    res.json(await setSetting("maintenance", req.body));
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
 // ─── Programs ─────────────────────────────────────────────────────────────────
 
 app.get("/api/programs", async (req, res) => {

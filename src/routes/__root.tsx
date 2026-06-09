@@ -1,4 +1,5 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 
@@ -65,5 +66,12 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  useEffect(() => {
+    if (window.location.pathname.startsWith("/admin")) return;
+    fetch("/api/maintenance")
+      .then((r) => r.json())
+      .then((d) => { if (d?.enabled) window.location.replace("/maintenance.html"); })
+      .catch(() => {});
+  }, []);
   return <Outlet />;
 }

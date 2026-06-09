@@ -254,26 +254,44 @@ export function BookingsDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
+  const [maintenance, setMaintenance] = useState(false);
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [b, d, a, progs] = await Promise.allSettled([
+      const [b, d, a, progs, maint] = await Promise.allSettled([
         api.get<Booking[]>("/api/bookings"),
         api.get<ProgramDates>("/api/program-dates"),
         api.get<Availability>("/api/availability"),
         api.get<Program[]>("/api/programs?all=true"),
+        api.get<{ enabled: boolean }>("/api/maintenance"),
       ]);
       if (b.status === "fulfilled") setBookings(b.value);
       if (d.status === "fulfilled") setProgramDates(d.value);
       if (a.status === "fulfilled") setAvailability({ ...DEFAULT_AVAILABILITY, ...a.value });
       if (progs.status === "fulfilled") setPrograms(progs.value);
-      const errors = [b, d, a, progs].filter((r) => r.status === "rejected");
+      if (maint.status === "fulfilled") setMaintenance(maint.value.enabled);
+      const errors = [b, d, a, progs, maint].filter((r) => r.status === "rejected");
       if (errors.length) console.warn("Some dashboard data failed to load:", errors.map((r) => (r as PromiseRejectedResult).reason?.message));
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const toggleMaintenance = async () => {
+    const next = !maintenance;
+    setMaintenance(next);
+    setMaintenanceSaving(true);
+    try {
+      await api.put("/api/maintenance", { enabled: next });
+    } catch {
+      setMaintenance(!next);
+      alert("Failed to update site status. Is the API running?");
+    } finally {
+      setMaintenanceSaving(false);
+    }
+  };
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
 
@@ -1026,7 +1044,22 @@ export function BookingsDashboard() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-white/10 space-y-3">
+          <p className="text-[10px] uppercase tracking-widest text-white/40 px-1">Site Status</p>
+          <button
+            type="button"
+            onClick={toggleMaintenance}
+            disabled={maintenanceSaving}
+            title={maintenance ? "Click to bring site LIVE" : "Click to enable Maintenance Mode"}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60 ${
+              maintenance
+                ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
+                : "bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${maintenance ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
+            {maintenanceSaving ? "Saving…" : maintenance ? "Maintenance Mode" : "Site is Live"}
+          </button>
           <p className="text-xs text-white/30 text-center">COHATA Admin v1.0</p>
         </div>
       </aside>
