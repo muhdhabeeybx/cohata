@@ -13,6 +13,18 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# ─── MAINTENANCE MODE ─────────────────────────────────────────────────────────
+# To ENABLE:  remove the # from every line in the block below, commit & push.
+# To DISABLE: add the # back, commit & push.
+# Netlify deploys in ~60 seconds — that's how fast the toggle takes effect.
+#
+# [[redirects]]
+#   from   = "/*"
+#   to     = "/maintenance.html"
+#   status = 200
+#   force  = true
+# ──────────────────────────────────────────────────────────────────────────────
+
 # Proxy /api/* to the Render backend — must come before the SSR catch-all.
 # This avoids needing VITE_API_URL and keeps all requests same-origin.
 [[redirects]]

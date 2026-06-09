@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>COHATA — Back Soon, In shā Allāh</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:   #faf7f2;
+      --plum:    #3d1a52;
+      --gold:    #c09a3c;
+      --muted:   #7a6a5a;
+      --border:  #e8e0d4;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--cream);
+      color: var(--plum);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100svh;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .ornament {
+      width: 48px;
+      height: 2px;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+      margin: 0 auto 2.5rem;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(2.4rem, 6vw, 3.8rem);
+      font-weight: 300;
+      line-height: 1.15;
+      color: var(--plum);
+      margin-bottom: 1.5rem;
+      max-width: 22ch;
+    }
+
+    h1 em {
+      font-style: italic;
+      font-weight: 300;
+    }
+
+    .divider {
+      width: 40px;
+      height: 1px;
+      background: var(--gold);
+      margin: 0 auto 1.75rem;
+      opacity: 0.6;
+    }
+
+    .body-text {
+      font-size: 1.05rem;
+      line-height: 1.75;
+      color: var(--muted);
+      max-width: 42ch;
+      margin: 0 auto 2.5rem;
+    }
+
+    .dua {
+      display: inline-block;
+      font-family: 'Fraunces', Georgia, serif;
+      font-style: italic;
+      font-size: 1.15rem;
+      color: var(--plum);
+      opacity: 0.65;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.75rem;
+      margin-bottom: 3rem;
+      letter-spacing: 0.01em;
+    }
+
+    .brand {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+
+    .contact {
+      margin-top: 1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .contact a {
+      color: var(--plum);
+      text-decoration: none;
+      border-bottom: 1px solid var(--gold);
+      padding-bottom: 1px;
+    }
+
+    .contact a:hover { opacity: 0.75; }
+
+    /* Subtle animated ring */
+    .ring {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 1.5px solid var(--gold);
+      opacity: 0.3;
+      position: fixed;
+      bottom: 3rem;
+      right: 3rem;
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1);   opacity: 0.3; }
+      50%       { transform: scale(1.4); opacity: 0.1; }
+    }
+
+    @media (max-width: 480px) {
+      .ring { display: none; }
+      .dua  { padding: 0.85rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ornament"></div>
+
+  <p class="tag">COHATA — Coach Halima Transformational Academy</p>
+
+  <h1>We're tending to<br><em>something beautiful</em><br>for you.</h1>
+
+  <div class="divider"></div>
+
+  <p class="body-text">
+    The COHATA website is currently undergoing scheduled maintenance.
+    We'll be back shortly, in shā Allāh — refreshed and ready to
+    walk this journey with you.
+  </p>
+
+  <span class="dua">&#8220;And He is with you wherever you are.&#8221; — 57:4</span>
+
+  <p class="brand">COHATA</p>
+
+  <p class="contact">
+    Urgent? Reach us at
+    <a href="mailto:hello@cohatacademy.com">hello@cohatacademy.com</a>
+  </p>
+
+  <div class="ring"></div>
+
+</body>
+</html>
