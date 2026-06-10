@@ -61,12 +61,18 @@ export interface Booking {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   program: string;
   status: string;
   enrollmentDate: string;
   sessionDate?: string;
   sessionTime?: string;
   notes?: string;
+  paymentStatus?: string;
+  paymentReference?: string;
+  amountPaid?: number;
+  currency?: string;
+  paidAt?: string;
   createdAt: string;
 }
 
@@ -79,6 +85,7 @@ export interface Program {
   duration: string;
   startDate: string;
   price: string;
+  amount: number;
   imageUrl: string;
   status: "active" | "draft";
   enrollmentOpen: boolean;
@@ -191,6 +198,26 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function formatNaira(amount: number) {
+  return `₦${amount.toLocaleString("en-NG")}`;
+}
+
+const PAYMENT_CFG: Record<string, { bg: string; text: string; border: string }> = {
+  paid:    { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  pending: { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
+  failed:  { bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200" },
+};
+
+function PaymentBadge({ status }: { status?: string }) {
+  if (!status) return <span className="text-xs text-muted-foreground">—</span>;
+  const c = PAYMENT_CFG[status] ?? PAYMENT_CFG.pending;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${c.bg} ${c.text} ${c.border}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
+
 function Avatar({ name }: { name: string }) {
   const initials = name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   return (
@@ -235,7 +262,7 @@ function emptyForm() {
 }
 
 function emptyProgramForm() {
-  return { title: "", tag: "", description: "", fullDescription: "", duration: "", startDate: "", price: "", imageUrl: "", status: "active" as const, enrollmentOpen: true };
+  return { title: "", tag: "", description: "", fullDescription: "", duration: "", startDate: "", price: "", amount: "", imageUrl: "", status: "active" as const, enrollmentOpen: true };
 }
 
 function emptyUserForm() {
@@ -492,7 +519,7 @@ export function BookingsDashboard() {
     setProgramForm({
       title: p.title, tag: p.tag, description: p.description,
       fullDescription: p.fullDescription, duration: p.duration,
-      startDate: p.startDate, price: p.price, imageUrl: p.imageUrl,
+      startDate: p.startDate, price: p.price, amount: p.amount ? String(p.amount) : "", imageUrl: p.imageUrl,
       status: p.status, enrollmentOpen: p.enrollmentOpen,
     });
     setProgramEditId(p.id);
@@ -506,11 +533,12 @@ export function BookingsDashboard() {
       return;
     }
     try {
+      const payload = { ...programForm, amount: Number(programForm.amount) || 0 };
       if (programEditId) {
-        const updated = await api.patch<Program>(`/api/programs/${programEditId}`, programForm);
+        const updated = await api.patch<Program>(`/api/programs/${programEditId}`, payload);
         setPrograms((prev) => prev.map((p) => p.id === programEditId ? updated : p));
       } else {
-        const created = await api.post<Program>("/api/programs", programForm);
+        const created = await api.post<Program>("/api/programs", payload);
         setPrograms((prev) => [created, ...prev]);
       }
       setIsProgramOpen(false);
@@ -701,6 +729,7 @@ export function BookingsDashboard() {
                   <th className="text-left px-6 py-3.5 font-medium text-muted-foreground">Person</th>
                   <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden md:table-cell">Program</th>
                   <th className="text-left px-4 py-3.5 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden xl:table-cell">Payment</th>
                   <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden lg:table-cell">Date</th>
                   <th className="px-4 py-3.5" scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
@@ -708,7 +737,7 @@ export function BookingsDashboard() {
               <tbody className="divide-y divide-border">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-16 text-center text-muted-foreground">
+                    <td colSpan={6} className="py-16 text-center text-muted-foreground">
                       {bookings.length === 0 ? "No bookings yet." : "No results match your filter."}
                     </td>
                   </tr>
@@ -728,6 +757,12 @@ export function BookingsDashboard() {
                         <span className="text-foreground/80 truncate max-w-[200px] block">{b.program}</span>
                       </td>
                       <td className="px-4 py-3.5"><StatusBadge status={b.status} /></td>
+                      <td className="px-4 py-3.5 hidden xl:table-cell">
+                        <PaymentBadge status={b.paymentStatus} />
+                        {b.paymentStatus === "paid" && b.amountPaid != null && (
+                          <span className="block text-xs text-muted-foreground mt-1">{formatNaira(b.amountPaid)}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3.5 text-muted-foreground hidden lg:table-cell">{fmt(b.enrollmentDate)}</td>
                       <td className="px-4 py-3.5 text-right">
                         <ChevronRight size={14} className={`inline text-muted-foreground transition-transform ${selected?.id === b.id ? "rotate-90 text-primary" : ""}`} />
@@ -1107,6 +1142,27 @@ export function BookingsDashboard() {
             <p className="text-sm text-foreground">{b.program}</p>
           </div>
 
+          {b.email && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">Email</p>
+              <a href={`mailto:${b.email}`} className="text-sm text-foreground hover:text-primary">{b.email}</a>
+            </div>
+          )}
+
+          {b.paymentStatus && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Payment</p>
+              <div className="flex items-center gap-2 mb-1">
+                <PaymentBadge status={b.paymentStatus} />
+                {b.paymentStatus === "paid" && b.amountPaid != null && (
+                  <span className="text-sm font-medium text-foreground">{formatNaira(b.amountPaid)}</span>
+                )}
+              </div>
+              {b.paidAt && <p className="text-xs text-muted-foreground">Paid {fmt(b.paidAt)}</p>}
+              {b.paymentReference && <p className="text-xs text-muted-foreground font-mono truncate">Ref: {b.paymentReference}</p>}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wide">Enrolled</p>
@@ -1401,8 +1457,21 @@ export function BookingsDashboard() {
                 <Input id="p-start" type="date" value={programForm.startDate} onChange={(e) => setProgramForm((f) => ({ ...f, startDate: e.target.value }))} className="mt-1" />
               </div>
               <div>
-                <Label htmlFor="p-price">Price</Label>
+                <Label htmlFor="p-price">Price (display)</Label>
                 <Input id="p-price" placeholder="e.g. ₦150,000" value={programForm.price} onChange={(e) => setProgramForm((f) => ({ ...f, price: e.target.value }))} className="mt-1" />
+              </div>
+            </div>
+
+            {/* Enrollment Fee */}
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="p-amount">Enrollment Fee (₦)</Label>
+                <Input id="p-amount" type="number" min="0" step="1" placeholder="0" value={programForm.amount} onChange={(e) => setProgramForm((f) => ({ ...f, amount: e.target.value }))} className="mt-1" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {Number(programForm.amount) > 0
+                    ? "Enrollees will be redirected to Paystack to pay this amount before enrollment is confirmed."
+                    : "Leave as 0 for free enrollment (lead-capture form only, no payment)."}
+                </p>
               </div>
             </div>
 

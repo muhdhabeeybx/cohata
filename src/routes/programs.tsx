@@ -22,15 +22,33 @@ function fmt(dateStr?: string) {
   return new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function formatNaira(amount: number) {
+  return `₦${amount.toLocaleString("en-NG")}`;
+}
+
 function EnrollModal({ program, onClose }: { program: Program; onClose: () => void }) {
+  const isPaid = (program.amount ?? 0) > 0;
   const [form, setForm] = useState({ name: "", phone: "", email: "", note: "" });
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setError("");
     try {
+      if (isPaid) {
+        const result = await api.post<{ authorization_url: string; reference: string }>("/api/payments/initialize", {
+          programId: program.id,
+          name: form.name,
+          phone: form.phone,
+          email: form.email,
+          notes: form.note,
+        });
+        window.location.href = result.authorization_url;
+        return;
+      }
       await api.post("/api/bookings", {
         name: form.name,
         phone: form.phone,
@@ -42,7 +60,7 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
       });
       setDone(true);
     } catch {
-      alert("Something went wrong. Please try again or contact us directly.");
+      setError("Something went wrong. Please try again or contact us directly.");
     } finally {
       setSubmitting(false);
     }
@@ -68,6 +86,9 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
               <div>
                 {program.tag && <p className="text-xs uppercase tracking-[0.3em] text-gold mb-1">{program.tag}</p>}
                 <h3 className="font-display text-2xl text-primary">{program.title}</h3>
+                {isPaid && (
+                  <p className="text-sm text-foreground/60 mt-1">Enrollment fee: <strong className="text-foreground">{formatNaira(program.amount)}</strong></p>
+                )}
               </div>
               <button type="button" title="Close" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors mt-1">
                 <X size={20} />
@@ -84,9 +105,10 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
               </div>
               <div>
                 <label htmlFor="enroll-email" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Email <span className="normal-case font-normal">(optional)</span>
+                  Email {isPaid ? "*" : <span className="normal-case font-normal">(optional)</span>}
                 </label>
-                <input id="enroll-email" type="email" placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full mt-1 px-4 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary text-sm" />
+                <input id="enroll-email" type="email" required={isPaid} placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full mt-1 px-4 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary text-sm" />
+                {isPaid && <p className="text-xs text-muted-foreground mt-1">Your payment receipt will be sent here.</p>}
               </div>
               <div>
                 <label htmlFor="enroll-note" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -94,10 +116,11 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
                 </label>
                 <textarea id="enroll-note" rows={3} placeholder="Share your intention or goal…" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="w-full mt-1 px-4 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary text-sm resize-none" />
               </div>
+              {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onClose} className="flex-1 border border-border py-3 rounded-full text-sm font-medium hover:bg-muted/40 transition-colors">Cancel</button>
                 <button type="submit" disabled={submitting} className="flex-1 bg-primary text-primary-foreground py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
-                  {submitting ? "Sending…" : "Submit Enrollment"}
+                  {submitting ? (isPaid ? "Redirecting to payment…" : "Sending…") : isPaid ? `Pay ${formatNaira(program.amount)} & Enroll` : "Submit Enrollment"}
                 </button>
               </div>
             </form>
@@ -161,7 +184,7 @@ function ProgramModal({ program, onClose, onEnroll }: { program: Program; onClos
           <div className="flex flex-col sm:flex-row gap-3">
             {program.enrollmentOpen ? (
               <button type="button" onClick={onEnroll} className="flex-1 sm:flex-initial bg-primary text-primary-foreground px-8 py-3.5 rounded-full font-medium hover:opacity-90 transition-opacity">
-                Enroll Now
+                {program.amount > 0 ? `Enroll & Pay ${formatNaira(program.amount)}` : "Enroll Now"}
               </button>
             ) : (
               <span className="text-sm text-muted-foreground italic">Enrollment is currently closed for this program.</span>

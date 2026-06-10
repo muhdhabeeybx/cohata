@@ -3,6 +3,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 // ─── DB connection ────────────────────────────────────────────────────────────
 
@@ -18,6 +19,14 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+if (!PAYSTACK_SECRET_KEY) {
+  console.warn("PAYSTACK_SECRET_KEY env var is not set — paid enrollments will be disabled until it is configured.");
+}
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://cohatacademy.com";
+const PAYSTACK_BASE_URL = "https://api.paystack.co";
+
 mongoose.set("bufferCommands", false);
 mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 15000 })
   .then(() => console.log("MongoDB connected"))
@@ -26,16 +35,21 @@ mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 15000 })
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const bookingSchema = new mongoose.Schema({
-  name:           { type: String, required: true },
-  phone:          { type: String, required: true },
-  email:          String,
-  program:        { type: String, required: true },
-  status:         { type: String, default: "Pending" },
-  enrollmentDate: String,
-  sessionDate:    String,
-  sessionTime:    String,
-  notes:          String,
-  createdAt:      { type: String, default: () => new Date().toISOString() },
+  name:             { type: String, required: true },
+  phone:            { type: String, required: true },
+  email:            String,
+  program:          { type: String, required: true },
+  status:           { type: String, default: "Pending" },
+  enrollmentDate:   String,
+  sessionDate:      String,
+  sessionTime:      String,
+  notes:            String,
+  paymentStatus:    String,   // "pending" | "paid" | "failed"
+  paymentReference: String,
+  amountPaid:       Number,   // in Naira
+  currency:         String,
+  paidAt:           String,
+  createdAt:        { type: String, default: () => new Date().toISOString() },
 }, { versionKey: false });
 
 // Transform _id → id in every JSON response
@@ -58,6 +72,7 @@ const programSchema = new mongoose.Schema({
   duration:        { type: String, default: "" },
   startDate:       { type: String, default: "" },
   price:           { type: String, default: "" },
+  amount:          { type: Number, default: 0 },   // ₦, used for Paystack charge — 0 means free enrollment
   imageUrl:        { type: String, default: "" },
   status:          { type: String, default: "active" },   // "active" | "draft"
   enrollmentOpen:  { type: Boolean, default: true },
@@ -129,6 +144,38 @@ async function setSetting(key, data) {
   return data;
 }
 
+// ─── Paystack ─────────────────────────────────────────────────────────────────
+
+async function paystackRequest(path, options = {}) {
+  const res = await fetch(`${PAYSTACK_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+  const json = await res.json();
+  if (!res.ok || json.status === false) {
+    throw new Error(json.message || "Paystack request failed");
+  }
+  return json.data;
+}
+
+// Marks a booking paid from a verified Paystack transaction. Idempotent — safe to
+// call from both the verify endpoint and the webhook for the same reference.
+async function markBookingPaid(tx) {
+  const booking = await Booking.findOne({ paymentReference: tx.reference });
+  if (!booking || booking.paymentStatus === "paid") return booking;
+  booking.paymentStatus = "paid";
+  booking.amountPaid = tx.amount / 100;
+  booking.currency = tx.currency;
+  booking.paidAt = new Date().toISOString();
+  if (booking.status === "Pending") booking.status = "Approved";
+  await booking.save();
+  return booking;
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 const app = express();
@@ -137,7 +184,8 @@ const PORT = process.env.PORT || 3001;
 // Open CORS — Netlify proxy is the auth boundary on the deployed site;
 // here we accept all origins so cohatacademy.com and localhost both work.
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+// Capture the raw body alongside the parsed JSON so the Paystack webhook can verify its signature.
+app.use(express.json({ limit: "10mb", verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
@@ -250,6 +298,102 @@ app.delete("/api/bookings/:id", authenticate, requireRole("admin", "bookings"), 
     if (!result) return res.status(404).json({ error: "Not found" });
     res.json({ ok: true });
   } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// ─── Payments (Paystack) ────────────────────────────────────────────────────────
+
+// Public — starts a paid enrollment. Creates a Pending/unpaid booking, then asks
+// Paystack for a hosted checkout link the browser can redirect to.
+app.post("/api/payments/initialize", async (req, res) => {
+  try {
+    if (!PAYSTACK_SECRET_KEY) return res.status(503).json({ error: "Online payments are not configured yet" });
+    const { programId, name, email, phone, notes } = req.body;
+    if (!programId || !name || !email || !phone) {
+      return res.status(400).json({ error: "Program, name, email, and phone are required" });
+    }
+    const program = await ProgramModel.findById(programId);
+    if (!program) return res.status(404).json({ error: "Program not found" });
+    if (!program.enrollmentOpen || program.status !== "active") {
+      return res.status(400).json({ error: "Enrollment is closed for this program" });
+    }
+    if (!program.amount || program.amount <= 0) {
+      return res.status(400).json({ error: "This program does not require online payment" });
+    }
+
+    const reference = `cohata_${Date.now()}_${crypto.randomBytes(6).toString("hex")}`;
+
+    const booking = await Booking.create({
+      name, phone, email, notes,
+      program: program.title,
+      status: "Pending",
+      enrollmentDate: new Date().toISOString().split("T")[0],
+      paymentStatus: "pending",
+      paymentReference: reference,
+      currency: "NGN",
+    });
+
+    const origin = req.headers.origin || FRONTEND_URL;
+    try {
+      const tx = await paystackRequest("/transaction/initialize", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          amount: Math.round(program.amount * 100),
+          currency: "NGN",
+          reference,
+          callback_url: `${origin}/programs/payment-callback`,
+          metadata: { bookingId: booking._id.toString(), programId: program._id.toString(), programTitle: program.title },
+        }),
+      });
+      res.json({ authorization_url: tx.authorization_url, reference });
+    } catch (paystackError) {
+      await Booking.findByIdAndDelete(booking._id);
+      throw paystackError;
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Public — called by the payment-callback page after Paystack redirects the user back.
+app.get("/api/payments/verify/:reference", async (req, res) => {
+  try {
+    if (!PAYSTACK_SECRET_KEY) return res.status(503).json({ error: "Online payments are not configured yet" });
+    const tx = await paystackRequest(`/transaction/verify/${encodeURIComponent(req.params.reference)}`);
+    let booking = null;
+    if (tx.status === "success") {
+      booking = await markBookingPaid(tx);
+    } else {
+      booking = await Booking.findOne({ paymentReference: req.params.reference });
+      if (booking && booking.paymentStatus !== "paid") {
+        booking.paymentStatus = "failed";
+        await booking.save();
+      }
+    }
+    res.json({
+      status: tx.status,
+      program: booking?.program,
+      amount: tx.amount / 100,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Paystack webhook — confirms payment server-side even if the user never returns
+// to the callback page. Verified via the x-paystack-signature header.
+app.post("/api/payments/webhook", async (req, res) => {
+  try {
+    if (!PAYSTACK_SECRET_KEY) return res.status(503).end();
+    const signature = req.headers["x-paystack-signature"];
+    const expected = crypto.createHmac("sha512", PAYSTACK_SECRET_KEY).update(req.rawBody).digest("hex");
+    if (signature !== expected) return res.status(401).end();
+
+    const event = req.body;
+    if (event.event === "charge.success") {
+      await markBookingPaid(event.data);
+    }
+    res.status(200).end();
+  } catch (e) {
+    console.error("Webhook error:", e.message);
+    res.status(500).end();
+  }
 });
 
 // ─── Availability ─────────────────────────────────────────────────────────────
