@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
+import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 import {
   LayoutDashboard,
   Users,
@@ -32,6 +33,9 @@ import {
   Link as LinkIcon,
   Eye,
   EyeOff,
+  ShieldCheck,
+  LogOut,
+  KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +98,15 @@ export interface Availability {
   blockedDates: string[];
 }
 
-type View = "overview" | "bookings" | "availability" | "schedule" | "programs";
+interface StaffUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  createdAt: string;
+}
+
+type View = "overview" | "bookings" | "availability" | "schedule" | "programs" | "team";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -158,12 +170,13 @@ const STATUS_CFG: Record<
   Cancelled:      { bg: "bg-gray-100",   text: "text-gray-600",    border: "border-gray-200",    dot: "bg-gray-400",    Icon: Ban },
 };
 
-const NAV = [
-  { id: "overview" as View,     label: "Overview",       Icon: LayoutDashboard },
-  { id: "bookings" as View,     label: "Bookings",       Icon: Users },
-  { id: "availability" as View, label: "Availability",   Icon: Clock },
-  { id: "schedule" as View,     label: "Program Intake", Icon: CalendarDays },
-  { id: "programs" as View,     label: "Programs CMS",   Icon: BookOpen },
+const NAV: { id: View; label: string; Icon: typeof LayoutDashboard; roles: Role[] }[] = [
+  { id: "overview",     label: "Overview",       Icon: LayoutDashboard, roles: ["admin", "finance", "bookings"] },
+  { id: "bookings",     label: "Bookings",       Icon: Users,           roles: ["admin", "finance", "bookings"] },
+  { id: "availability", label: "Availability",   Icon: Clock,           roles: ["admin", "bookings"] },
+  { id: "schedule",     label: "Program Intake", Icon: CalendarDays,    roles: ["admin", "bookings", "programs"] },
+  { id: "programs",     label: "Programs CMS",   Icon: BookOpen,        roles: ["admin", "programs"] },
+  { id: "team",         label: "Team & Access",  Icon: ShieldCheck,     roles: ["admin"] },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -225,9 +238,23 @@ function emptyProgramForm() {
   return { title: "", tag: "", description: "", fullDescription: "", duration: "", startDate: "", price: "", imageUrl: "", status: "active" as const, enrollmentOpen: true };
 }
 
+function emptyUserForm() {
+  return { name: "", email: "", password: "", role: "bookings" as Role };
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function BookingsDashboard() {
+  const { user, logout } = useAuth();
+  const role: Role = user?.role ?? "bookings";
+  const isAdmin = role === "admin";
+  const canViewBookings = role === "admin" || role === "finance" || role === "bookings";
+  const canManageBookings = role === "admin" || role === "bookings";
+  const canManageAvailability = role === "admin" || role === "bookings";
+  const canManageSchedule = role === "admin" || role === "bookings" || role === "programs";
+  const canManagePrograms = role === "admin" || role === "programs";
+  const visibleNav = NAV.filter((n) => n.roles.includes(role));
+
   const [view, setView] = useState<View>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -253,6 +280,15 @@ export function BookingsDashboard() {
   const [programImageTab, setProgramImageTab] = useState<"url" | "upload">("url");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Team / access state
+  const [users, setUsers] = useState<StaffUser[]>([]);
+  const [isUserOpen, setIsUserOpen] = useState(false);
+  const [userForm, setUserForm] = useState(emptyUserForm());
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [maintenance, setMaintenance] = useState(false);
   const [maintenanceSaving, setMaintenanceSaving] = useState(false);
@@ -260,24 +296,36 @@ export function BookingsDashboard() {
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [b, d, a, progs, maint] = await Promise.allSettled([
-        api.get<Booking[]>("/api/bookings"),
-        api.get<ProgramDates>("/api/program-dates"),
-        api.get<Availability>("/api/availability"),
-        api.get<Program[]>("/api/programs?all=true"),
-        api.get<{ enabled: boolean }>("/api/maintenance"),
-      ]);
-      if (b.status === "fulfilled") setBookings(b.value);
-      if (d.status === "fulfilled") setProgramDates(d.value);
-      if (a.status === "fulfilled") setAvailability({ ...DEFAULT_AVAILABILITY, ...a.value });
-      if (progs.status === "fulfilled") setPrograms(progs.value);
-      if (maint.status === "fulfilled") setMaintenance(maint.value.enabled);
-      const errors = [b, d, a, progs, maint].filter((r) => r.status === "rejected");
-      if (errors.length) console.warn("Some dashboard data failed to load:", errors.map((r) => (r as PromiseRejectedResult).reason?.message));
+      const tasks: Record<string, Promise<unknown>> = {
+        programDates: api.get<ProgramDates>("/api/program-dates"),
+        availability: api.get<Availability>("/api/availability"),
+        programs: api.get<Program[]>("/api/programs?all=true"),
+        maintenance: api.get<{ enabled: boolean }>("/api/maintenance"),
+      };
+      if (canViewBookings) tasks.bookings = api.get<Booking[]>("/api/bookings");
+      if (isAdmin) tasks.users = api.get<StaffUser[]>("/api/users");
+
+      const keys = Object.keys(tasks);
+      const results = await Promise.allSettled(keys.map((k) => tasks[k]));
+      results.forEach((r, i) => {
+        const key = keys[i];
+        if (r.status !== "fulfilled") {
+          console.warn(`Failed to load ${key}:`, (r as PromiseRejectedResult).reason?.message);
+          return;
+        }
+        switch (key) {
+          case "bookings": setBookings(r.value as Booking[]); break;
+          case "programDates": setProgramDates(r.value as ProgramDates); break;
+          case "availability": setAvailability({ ...DEFAULT_AVAILABILITY, ...(r.value as Availability) }); break;
+          case "programs": setPrograms(r.value as Program[]); break;
+          case "maintenance": setMaintenance((r.value as { enabled: boolean }).enabled); break;
+          case "users": setUsers(r.value as StaffUser[]); break;
+        }
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canViewBookings, isAdmin]);
 
   const toggleMaintenance = async () => {
     const next = !maintenance;
@@ -294,6 +342,62 @@ export function BookingsDashboard() {
   };
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
+
+  // Redirect to the first section this role can actually see.
+  useEffect(() => {
+    if (visibleNav.length && !visibleNav.some((n) => n.id === view)) {
+      setView(visibleNav[0].id);
+    }
+  }, [visibleNav, view]);
+
+  // ── Team mutations ──────────────────────────────────────────────────────────
+
+  const addUser = async () => {
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.password) {
+      alert("Name, email, and password are required.");
+      return;
+    }
+    if (userForm.password.length < 8) {
+      alert("Password must be at least 8 characters.");
+      return;
+    }
+    try {
+      const created = await api.post<StaffUser>("/api/users", userForm);
+      setUsers((prev) => [...prev, created]);
+      setIsUserOpen(false);
+      setUserForm(emptyUserForm());
+    } catch (e) {
+      alert(e instanceof Error && e.message.includes("409") ? "A user with that email already exists." : "Failed to add team member.");
+    }
+  };
+
+  const removeUser = async (u: StaffUser) => {
+    if (u.id === user?.id) {
+      alert("You cannot remove your own account.");
+      return;
+    }
+    if (!confirm(`Remove ${u.name}'s access? This cannot be undone.`)) return;
+    setUsers((prev) => prev.filter((x) => x.id !== u.id));
+    await api.del(`/api/users/${u.id}`).catch(console.error);
+  };
+
+  const changePassword = async () => {
+    setPasswordError("");
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await api.post("/api/auth/change-password", passwordForm);
+      setIsPasswordOpen(false);
+      setPasswordForm({ currentPassword: "", newPassword: "" });
+    } catch {
+      setPasswordError("Current password is incorrect.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   // ── Availability mutations ──────────────────────────────────────────────────
 
@@ -905,6 +1009,51 @@ export function BookingsDashboard() {
     );
   }
 
+  // ── Team & Access ────────────────────────────────────────────────────────────
+
+  function TeamContent() {
+    return (
+      <div className="space-y-4">
+        {users.length === 0 ? (
+          <div className="bg-card border border-dashed border-border rounded-2xl p-16 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck size={24} />
+            </div>
+            <h3 className="font-semibold text-foreground mb-1">No team members yet</h3>
+            <p className="text-sm text-muted-foreground mb-5">Add staff accounts so they can sign in to the dashboard.</p>
+            <Button onClick={() => { setUserForm(emptyUserForm()); setIsUserOpen(true); }} className="bg-primary text-primary-foreground">
+              <Plus size={14} className="mr-1.5" /> Add Team Member
+            </Button>
+          </div>
+        ) : (
+          <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+            {users.map((u) => (
+              <div key={u.id} className="flex items-center gap-3 px-5 py-4">
+                <Avatar name={u.name} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-foreground text-sm truncate">{u.name}</p>
+                    {u.id === user?.id && <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex-shrink-0">(You)</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                </div>
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-primary/8 text-primary flex-shrink-0">
+                  {ROLE_LABELS[u.role]}
+                </span>
+                <span className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">{fmt(u.createdAt)}</span>
+                {u.id !== user?.id && (
+                  <button type="button" title="Remove access" onClick={() => removeUser(u)} className="h-8 w-8 flex-shrink-0 rounded-md border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center">
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── Detail Panel ─────────────────────────────────────────────────────────────
 
   function DetailPanel() {
@@ -937,16 +1086,20 @@ export function BookingsDashboard() {
         <div className="p-4 space-y-5 flex-1">
           <div>
             <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Status</p>
-            <div className="flex flex-wrap gap-1.5">
-              {STATUSES.map((s) => {
-                const c = STATUS_CFG[s];
-                return (
-                  <button key={s} onClick={() => updateStatus(b.id, s)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${b.status === s ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-1 ring-current/30` : "bg-muted/40 text-muted-foreground border-border hover:border-primary/30"}`}>
-                    <c.Icon size={11} />{s}
-                  </button>
-                );
-              })}
-            </div>
+            {canManageBookings ? (
+              <div className="flex flex-wrap gap-1.5">
+                {STATUSES.map((s) => {
+                  const c = STATUS_CFG[s];
+                  return (
+                    <button key={s} onClick={() => updateStatus(b.id, s)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${b.status === s ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-1 ring-current/30` : "bg-muted/40 text-muted-foreground border-border hover:border-primary/30"}`}>
+                      <c.Icon size={11} />{s}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <StatusBadge status={b.status} />
+            )}
           </div>
 
           <div>
@@ -970,7 +1123,7 @@ export function BookingsDashboard() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Notes</p>
-              {!editingNotes && (
+              {canManageBookings && !editingNotes && (
                 <button onClick={() => { setTempNotes(b.notes ?? ""); setEditingNotes(true); }} className="text-xs text-primary flex items-center gap-1 hover:underline">
                   <Edit3 size={10} /> Edit
                 </button>
@@ -990,11 +1143,13 @@ export function BookingsDashboard() {
           </div>
         </div>
 
-        <div className="p-4 border-t border-border">
-          <button type="button" onClick={() => deleteBooking(b.id)} className="w-full flex items-center justify-center gap-2 text-sm text-red-600 hover:bg-red-50 py-2 rounded-xl transition-colors border border-transparent hover:border-red-100">
-            <Trash2 size={13} /> Delete booking
-          </button>
-        </div>
+        {canManageBookings && (
+          <div className="p-4 border-t border-border">
+            <button type="button" onClick={() => deleteBooking(b.id)} className="w-full flex items-center justify-center gap-2 text-sm text-red-600 hover:bg-red-50 py-2 rounded-xl transition-colors border border-transparent hover:border-red-100">
+              <Trash2 size={13} /> Delete booking
+            </button>
+          </div>
+        )}
       </aside>
     );
   }
@@ -1005,6 +1160,7 @@ export function BookingsDashboard() {
     : view === "bookings" ? "Bookings & Enrollments"
     : view === "availability" ? "Availability"
     : view === "schedule" ? "Program Intake Schedule"
+    : view === "team" ? "Team & Access"
     : "Programs CMS";
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -1031,7 +1187,7 @@ export function BookingsDashboard() {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">
-          {NAV.map(({ id, label, Icon }) => (
+          {visibleNav.map(({ id, label, Icon }) => (
             <button key={id} onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${view === id ? "bg-white/15 text-white" : "text-white/55 hover:text-white hover:bg-white/8"}`}>
               <Icon size={16} />
               {label}
@@ -1045,22 +1201,44 @@ export function BookingsDashboard() {
         </nav>
 
         <div className="p-4 border-t border-white/10 space-y-3">
-          <p className="text-[10px] uppercase tracking-widest text-white/40 px-1">Site Status</p>
-          <button
-            type="button"
-            onClick={toggleMaintenance}
-            disabled={maintenanceSaving}
-            title={maintenance ? "Click to bring site LIVE" : "Click to enable Maintenance Mode"}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60 ${
-              maintenance
-                ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
-                : "bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${maintenance ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
-            {maintenanceSaving ? "Saving…" : maintenance ? "Maintenance Mode" : "Site is Live"}
-          </button>
-          <p className="text-xs text-white/30 text-center">COHATA Admin v1.0</p>
+          {isAdmin && (
+            <>
+              <p className="text-[10px] uppercase tracking-widest text-white/40 px-1">Site Status</p>
+              <button
+                type="button"
+                onClick={toggleMaintenance}
+                disabled={maintenanceSaving}
+                title={maintenance ? "Click to bring site LIVE" : "Click to enable Maintenance Mode"}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60 ${
+                  maintenance
+                    ? "bg-amber-400/15 text-amber-300 hover:bg-amber-400/25"
+                    : "bg-emerald-400/10 text-emerald-400 hover:bg-emerald-400/20"
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${maintenance ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
+                {maintenanceSaving ? "Saving…" : maintenance ? "Maintenance Mode" : "Site is Live"}
+              </button>
+            </>
+          )}
+
+          <div className="flex items-center gap-2.5 px-1 pt-1">
+            <div className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {(user?.name ?? "?").split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-[11px] text-white/40 truncate">{ROLE_LABELS[role]}</p>
+            </div>
+          </div>
+
+          <div className="flex gap-1.5">
+            <button type="button" onClick={() => setIsPasswordOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-medium text-white/55 hover:text-white hover:bg-white/8 transition-colors">
+              <KeyRound size={13} /> Password
+            </button>
+            <button type="button" onClick={logout} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs font-medium text-white/55 hover:text-white hover:bg-white/8 transition-colors">
+              <LogOut size={13} /> Sign out
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -1081,19 +1259,27 @@ export function BookingsDashboard() {
                 <p className="text-xs text-muted-foreground">
                   {view === "programs"
                     ? `${programs.length} program${programs.length !== 1 ? "s" : ""} · ${programs.filter(p => p.status === "active").length} live`
-                    : `${stats.total} total · ${stats.pending} pending`}
+                    : view === "team"
+                    ? `${users.length} team member${users.length !== 1 ? "s" : ""}`
+                    : (view === "overview" || view === "bookings") && canViewBookings
+                    ? `${stats.total} total · ${stats.pending} pending`
+                    : ""}
                 </p>
               </div>
             </div>
-            {view === "programs" ? (
+            {view === "programs" && canManagePrograms ? (
               <Button onClick={openAddProgram} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus size={14} className="mr-1.5" /> Add Program
               </Button>
-            ) : (
+            ) : view === "team" && isAdmin ? (
+              <Button onClick={() => { setUserForm(emptyUserForm()); setIsUserOpen(true); }} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={14} className="mr-1.5" /> Add Team Member
+              </Button>
+            ) : (view === "overview" || view === "bookings") && canManageBookings ? (
               <Button onClick={() => setIsAddOpen(true)} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus size={14} className="mr-1.5" /> New Booking
               </Button>
-            )}
+            ) : null}
           </header>
 
           {/* Page content */}
@@ -1103,6 +1289,7 @@ export function BookingsDashboard() {
             {view === "availability" && <AvailabilityContent />}
             {view === "schedule"    && <ScheduleContent />}
             {view === "programs"    && <ProgramsContent />}
+            {view === "team"        && <TeamContent />}
           </main>
         </div>
 
@@ -1295,6 +1482,71 @@ export function BookingsDashboard() {
               <Button variant="outline" onClick={() => setIsProgramOpen(false)}>Cancel</Button>
               <Button onClick={saveProgram} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {programEditId ? "Save Changes" : "Publish Program"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Team Member Modal */}
+      <Dialog open={isUserOpen} onOpenChange={setIsUserOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl" style={{ color: "var(--primary)" }}>Add Team Member</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div>
+              <Label htmlFor="u-name">Full Name *</Label>
+              <Input id="u-name" placeholder="e.g. Aisha Bello" value={userForm.name} onChange={(e) => setUserForm((f) => ({ ...f, name: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="u-email">Email *</Label>
+              <Input id="u-email" type="email" placeholder="name@example.com" value={userForm.email} onChange={(e) => setUserForm((f) => ({ ...f, email: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="u-password">Temporary Password *</Label>
+              <Input id="u-password" placeholder="At least 8 characters" value={userForm.password} onChange={(e) => setUserForm((f) => ({ ...f, password: e.target.value }))} className="mt-1" />
+              <p className="text-xs text-muted-foreground mt-1">Share this with them — they can change it from the dashboard after signing in.</p>
+            </div>
+            <div>
+              <Label htmlFor="u-role">Role *</Label>
+              <Select value={userForm.role} onValueChange={(v: Role) => setUserForm((f) => ({ ...f, role: v }))}>
+                <SelectTrigger id="u-role" className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
+                    <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsUserOpen(false)}>Cancel</Button>
+              <Button onClick={addUser} className="bg-primary text-primary-foreground hover:bg-primary/90">Add Member</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Modal */}
+      <Dialog open={isPasswordOpen} onOpenChange={(open) => { setIsPasswordOpen(open); if (!open) { setPasswordForm({ currentPassword: "", newPassword: "" }); setPasswordError(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl" style={{ color: "var(--primary)" }}>Change Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div>
+              <Label htmlFor="pw-current">Current Password</Label>
+              <Input id="pw-current" type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="pw-new">New Password</Label>
+              <Input id="pw-new" type="password" autoComplete="new-password" placeholder="At least 8 characters" value={passwordForm.newPassword} onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))} className="mt-1" />
+            </div>
+            {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setIsPasswordOpen(false)}>Cancel</Button>
+              <Button onClick={changePassword} disabled={passwordSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                {passwordSaving ? "Saving…" : "Update Password"}
               </Button>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Calendar, Clock, CalendarOff } from "lucide-react";
-import type { Availability, Booking } from "@/components/BookingsDashboard";
+import type { Availability } from "@/components/BookingsDashboard";
 import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/book")({
@@ -58,6 +58,12 @@ function generateSlots(av: Availability) {
 
 const ACTIVE_STATUSES = ["Pending", "Approved", "Scheduled", "In Progress"];
 
+interface BookedSlot {
+  sessionDate?: string;
+  sessionTime?: string;
+  status: string;
+}
+
 function Book() {
   const [step, setStep] = useState(1);
   const [type, setType] = useState<string | null>(null);
@@ -66,12 +72,12 @@ function Book() {
   const [info, setInfo] = useState({ name: "", email: "", phone: "", note: "" });
   const [done, setDone] = useState(false);
   const [availability, setAvailability] = useState<Availability>(DEFAULT_AVAILABILITY);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<BookedSlot[]>([]);
 
   useEffect(() => {
     Promise.all([
       api.get<Availability>("/api/availability").then((a) => setAvailability({ ...DEFAULT_AVAILABILITY, ...a })),
-      api.get<Booking[]>("/api/bookings").then(setBookings),
+      api.get<BookedSlot[]>("/api/booked-slots").then(setBookings),
     ]).catch(console.error);
   }, []);
 
