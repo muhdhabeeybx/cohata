@@ -53,7 +53,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/cohata-logo.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,7 +84,6 @@ export interface Program {
   fullDescription: string;
   duration: string;
   startDate: string;
-  price: string;
   amount: number;
   imageUrl: string;
   status: "active" | "draft";
@@ -202,6 +201,13 @@ function formatNaira(amount: number) {
   return `₦${amount.toLocaleString("en-NG")}`;
 }
 
+// Formats a raw input value into a comma-grouped digit string, e.g. "150000" -> "150,000"
+function formatAmountInput(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-NG");
+}
+
 const PAYMENT_CFG: Record<string, { bg: string; text: string; border: string }> = {
   paid:    { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
   pending: { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200" },
@@ -262,7 +268,7 @@ function emptyForm() {
 }
 
 function emptyProgramForm() {
-  return { title: "", tag: "", description: "", fullDescription: "", duration: "", startDate: "", price: "", amount: "", imageUrl: "", status: "active" as const, enrollmentOpen: true };
+  return { title: "", tag: "", description: "", fullDescription: "", duration: "", startDate: "", amount: "", imageUrl: "", status: "active" as const, enrollmentOpen: true };
 }
 
 function emptyUserForm() {
@@ -519,7 +525,7 @@ export function BookingsDashboard() {
     setProgramForm({
       title: p.title, tag: p.tag, description: p.description,
       fullDescription: p.fullDescription, duration: p.duration,
-      startDate: p.startDate, price: p.price, amount: p.amount ? String(p.amount) : "", imageUrl: p.imageUrl,
+      startDate: p.startDate, amount: p.amount ? p.amount.toLocaleString("en-NG") : "", imageUrl: p.imageUrl,
       status: p.status, enrollmentOpen: p.enrollmentOpen,
     });
     setProgramEditId(p.id);
@@ -533,7 +539,7 @@ export function BookingsDashboard() {
       return;
     }
     try {
-      const payload = { ...programForm, amount: Number(programForm.amount) || 0 };
+      const payload = { ...programForm, amount: Number(programForm.amount.replace(/,/g, "")) || 0 };
       if (programEditId) {
         const updated = await api.patch<Program>(`/api/programs/${programEditId}`, payload);
         setPrograms((prev) => prev.map((p) => p.id === programEditId ? updated : p));
@@ -564,8 +570,8 @@ export function BookingsDashboard() {
   const handleProgramImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 3 * 1024 * 1024) {
-      alert("Image must be under 3 MB. Try compressing it first.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Image must be under 10 MB. Try compressing it first.");
       return;
     }
     const reader = new FileReader();
@@ -1011,7 +1017,7 @@ export function BookingsDashboard() {
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2.5 mb-3">
                     {p.duration && <span className="flex items-center gap-1"><Clock size={10} />{p.duration}</span>}
                     {p.startDate && <span className="flex items-center gap-1"><Calendar size={10} />{fmt(p.startDate)}</span>}
-                    {p.price && <span className="font-medium text-foreground">{p.price}</span>}
+                    {p.amount > 0 && <span className="font-medium text-foreground">{formatNaira(p.amount)}</span>}
                   </div>
 
                   <div className="flex gap-2 mt-auto pt-1">
@@ -1446,7 +1452,7 @@ export function BookingsDashboard() {
               <textarea id="p-full" rows={5} placeholder="Detailed program overview, what's included, who it's for…" value={programForm.fullDescription} onChange={(e) => setProgramForm((f) => ({ ...f, fullDescription: e.target.value }))} className="w-full mt-1 px-3 py-2 text-sm rounded-xl border border-input bg-background focus:outline-none focus:border-primary resize-none" />
             </div>
 
-            {/* Duration / Start Date / Price */}
+            {/* Duration / Start Date / Enrollment Fee */}
             <div className="grid sm:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="p-dur">Duration</Label>
@@ -1457,19 +1463,14 @@ export function BookingsDashboard() {
                 <Input id="p-start" type="date" value={programForm.startDate} onChange={(e) => setProgramForm((f) => ({ ...f, startDate: e.target.value }))} className="mt-1" />
               </div>
               <div>
-                <Label htmlFor="p-price">Price (display)</Label>
-                <Input id="p-price" placeholder="e.g. ₦150,000" value={programForm.price} onChange={(e) => setProgramForm((f) => ({ ...f, price: e.target.value }))} className="mt-1" />
-              </div>
-            </div>
-
-            {/* Enrollment Fee */}
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div>
                 <Label htmlFor="p-amount">Enrollment Fee (₦)</Label>
-                <Input id="p-amount" type="number" min="0" step="1" placeholder="0" value={programForm.amount} onChange={(e) => setProgramForm((f) => ({ ...f, amount: e.target.value }))} className="mt-1" />
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₦</span>
+                  <Input id="p-amount" type="text" inputMode="numeric" placeholder="0" value={programForm.amount} onChange={(e) => setProgramForm((f) => ({ ...f, amount: formatAmountInput(e.target.value) }))} className="pl-7" />
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {Number(programForm.amount) > 0
-                    ? "Enrollees will be redirected to Paystack to pay this amount before enrollment is confirmed."
+                  {Number(programForm.amount.replace(/,/g, "")) > 0
+                    ? "Shown as the program price, and charged via the Paystack popup before enrollment is confirmed."
                     : "Leave as 0 for free enrollment (lead-capture form only, no payment)."}
                 </p>
               </div>
@@ -1498,7 +1499,7 @@ export function BookingsDashboard() {
                       <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full flex flex-col items-center justify-center gap-2 py-6 border border-dashed border-border rounded-xl text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors text-sm">
                         <Upload size={20} />
                         <span>Click to choose image</span>
-                        <span className="text-xs opacity-60">JPG, PNG, WebP · max 3 MB</span>
+                        <span className="text-xs opacity-60">JPG, PNG, WebP · max 10 MB</span>
                       </button>
                     </div>
                   )}

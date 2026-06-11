@@ -26,10 +26,36 @@ function formatNaira(amount: number) {
   return `₦${amount.toLocaleString("en-NG")}`;
 }
 
+// Loads Paystack's Inline JS (popup) library once, reusing it on subsequent enrollments.
+function loadPaystackScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as unknown as { PaystackPop?: unknown }).PaystackPop) {
+      resolve();
+      return;
+    }
+    const existing = document.getElementById("paystack-inline-js") as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("Failed to load Paystack")));
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "paystack-inline-js";
+    script.src = "https://js.paystack.co/v2/inline.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Paystack"));
+    document.body.appendChild(script);
+  });
+}
+
+type EnrollStage = "form" | "free-success" | "pay-success" | "pay-failed";
+
 function EnrollModal({ program, onClose }: { program: Program; onClose: () => void }) {
   const isPaid = (program.amount ?? 0) > 0;
   const [form, setForm] = useState({ name: "", phone: "", email: "", note: "" });
-  const [done, setDone] = useState(false);
+  const [stage, setStage] = useState<EnrollStage>("form");
+  const [paidAmount, setPaidAmount] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,14 +65,37 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
     setError("");
     try {
       if (isPaid) {
-        const result = await api.post<{ authorization_url: string; reference: string }>("/api/payments/initialize", {
+        const result = await api.post<{ access_code: string; reference: string }>("/api/payments/initialize", {
           programId: program.id,
           name: form.name,
           phone: form.phone,
           email: form.email,
           notes: form.note,
         });
-        window.location.href = result.authorization_url;
+        await loadPaystackScript();
+        const PaystackPop = (window as unknown as { PaystackPop: new () => { resumeTransaction: (accessCode: string, opts: { onSuccess: () => void; onCancel: () => void }) => void } }).PaystackPop;
+        const popup = new PaystackPop();
+        popup.resumeTransaction(result.access_code, {
+          onSuccess: async () => {
+            try {
+              const verify = await api.get<{ status: string; program?: string; amount?: number }>(`/api/payments/verify/${encodeURIComponent(result.reference)}`);
+              if (verify.status === "success") {
+                setPaidAmount(verify.amount ?? program.amount);
+                setStage("pay-success");
+              } else {
+                setStage("pay-failed");
+              }
+            } catch {
+              setStage("pay-failed");
+            } finally {
+              setSubmitting(false);
+            }
+          },
+          onCancel: () => {
+            setSubmitting(false);
+            setError("Payment window closed. You can try again when you're ready.");
+          },
+        });
         return;
       }
       await api.post("/api/bookings", {
@@ -58,10 +107,10 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
         status: "Pending",
         enrollmentDate: new Date().toISOString().split("T")[0],
       });
-      setDone(true);
+      setStage("free-success");
+      setSubmitting(false);
     } catch {
-      setError("Something went wrong. Please try again or contact us directly.");
-    } finally {
+      setError(isPaid ? "Couldn't start the payment. Please try again or contact us directly." : "Something went wrong. Please try again or contact us directly.");
       setSubmitting(false);
     }
   };
@@ -69,7 +118,7 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card rounded-3xl p-8 md:p-10 max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        {done ? (
+        {stage === "free-success" && (
           <div className="text-center py-6">
             <div className="w-14 h-14 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center mb-4">
               <Check size={24} />
@@ -80,7 +129,38 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
             </p>
             <button type="button" onClick={onClose} className="text-primary font-medium hover:underline">Close</button>
           </div>
-        ) : (
+        )}
+
+        {stage === "pay-success" && (
+          <div className="text-center py-6">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-4">
+              <Check size={24} />
+            </div>
+            <h3 className="font-display text-2xl text-primary mb-2">JazākAllāhu khayran!</h3>
+            <p className="text-foreground/70 mb-6">
+              Your payment{paidAmount ? ` of ${formatNaira(paidAmount)}` : ""} was successful and your enrollment for <strong>{program.title}</strong> is confirmed. Our team will reach out shortly with next steps.
+            </p>
+            <button type="button" onClick={onClose} className="text-primary font-medium hover:underline">Close</button>
+          </div>
+        )}
+
+        {stage === "pay-failed" && (
+          <div className="text-center py-6">
+            <div className="w-14 h-14 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4">
+              <X size={24} />
+            </div>
+            <h3 className="font-display text-2xl text-primary mb-2">Payment not completed</h3>
+            <p className="text-foreground/70 mb-6">
+              Your payment could not be confirmed. If you were charged, please contact us and we'll sort it out — otherwise, feel free to try again.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button type="button" onClick={onClose} className="border border-border px-6 py-2.5 rounded-full text-sm font-medium hover:bg-muted/40 transition-colors">Close</button>
+              <button type="button" onClick={() => { setStage("form"); setError(""); }} className="bg-primary text-primary-foreground px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition-opacity">Try Again</button>
+            </div>
+          </div>
+        )}
+
+        {stage === "form" && (
           <>
             <div className="flex items-start justify-between mb-6">
               <div>
@@ -120,7 +200,7 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onClose} className="flex-1 border border-border py-3 rounded-full text-sm font-medium hover:bg-muted/40 transition-colors">Cancel</button>
                 <button type="submit" disabled={submitting} className="flex-1 bg-primary text-primary-foreground py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
-                  {submitting ? (isPaid ? "Redirecting to payment…" : "Sending…") : isPaid ? `Pay ${formatNaira(program.amount)} & Enroll` : "Submit Enrollment"}
+                  {submitting ? (isPaid ? "Opening payment…" : "Sending…") : isPaid ? `Pay ${formatNaira(program.amount)} & Enroll` : "Submit Enrollment"}
                 </button>
               </div>
             </form>
@@ -163,9 +243,9 @@ function ProgramModal({ program, onClose, onEnroll }: { program: Program; onClos
                 <Calendar size={11} /> Starts {fmt(program.startDate)}
               </span>
             )}
-            {program.price && (
+            {program.amount > 0 && (
               <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-gold/10 text-foreground border border-gold/30 font-semibold">
-                {program.price}
+                {formatNaira(program.amount)}
               </span>
             )}
             {program.enrollmentOpen && (
@@ -303,7 +383,7 @@ function Programs() {
                   <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       {p.duration && <span className="flex items-center gap-1"><Clock size={10} />{p.duration}</span>}
-                      {p.price && <span className="font-semibold text-foreground">{p.price}</span>}
+                      {p.amount > 0 && <span className="font-semibold text-foreground">{formatNaira(p.amount)}</span>}
                     </div>
                     <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
                       View details <ChevronRight size={12} />

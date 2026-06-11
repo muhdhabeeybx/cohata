@@ -71,8 +71,7 @@ const programSchema = new mongoose.Schema({
   fullDescription: { type: String, default: "" },
   duration:        { type: String, default: "" },
   startDate:       { type: String, default: "" },
-  price:           { type: String, default: "" },
-  amount:          { type: Number, default: 0 },   // ₦, used for Paystack charge — 0 means free enrollment
+  amount:          { type: Number, default: 0 },   // ₦, shown on site and used for Paystack charge — 0 means free enrollment
   imageUrl:        { type: String, default: "" },
   status:          { type: String, default: "active" },   // "active" | "draft"
   enrollmentOpen:  { type: Boolean, default: true },
@@ -185,7 +184,7 @@ const PORT = process.env.PORT || 3001;
 // here we accept all origins so cohatacademy.com and localhost both work.
 app.use(cors());
 // Capture the raw body alongside the parsed JSON so the Paystack webhook can verify its signature.
-app.use(express.json({ limit: "10mb", verify: (req, _res, buf) => { req.rawBody = buf; } }));
+app.use(express.json({ limit: "15mb", verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
@@ -345,7 +344,7 @@ app.post("/api/payments/initialize", async (req, res) => {
           metadata: { bookingId: booking._id.toString(), programId: program._id.toString(), programTitle: program.title },
         }),
       });
-      res.json({ authorization_url: tx.authorization_url, reference });
+      res.json({ authorization_url: tx.authorization_url, access_code: tx.access_code, reference });
     } catch (paystackError) {
       await Booking.findByIdAndDelete(booking._id);
       throw paystackError;

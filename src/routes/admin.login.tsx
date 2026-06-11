@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/cohata-logo.png";
 
 export const Route = createFileRoute("/admin/login")({
   component: AdminLogin,
