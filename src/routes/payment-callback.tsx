@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Check, X, Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/programs/payment-callback")({
+export const Route = createFileRoute("/payment-callback")({
   component: PaymentCallback,
   validateSearch: (search: Record<string, unknown>) => ({
     reference: (search.reference ?? search.trxref) as string | undefined,

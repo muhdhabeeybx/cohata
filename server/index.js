@@ -341,7 +341,7 @@ app.post("/api/payments/initialize", async (req, res) => {
           amount: Math.round(program.amount * 100),
           currency: "NGN",
           reference,
-          callback_url: `${origin}/programs/payment-callback`,
+          callback_url: `${origin}/payment-callback`,
           metadata: { bookingId: booking._id.toString(), programId: program._id.toString(), programTitle: program.title },
         }),
       });

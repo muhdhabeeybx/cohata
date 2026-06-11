@@ -11,11 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ProgramsRouteImport } from './routes/programs'
+import { Route as PaymentCallbackRouteImport } from './routes/payment-callback'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as BookRouteImport } from './routes/book'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProgramsPaymentCallbackRouteImport } from './routes/programs.payment-callback'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 
@@ -27,6 +27,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const ProgramsRoute = ProgramsRouteImport.update({
   id: '/programs',
   path: '/programs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentCallbackRoute = PaymentCallbackRouteImport.update({
+  id: '/payment-callback',
+  path: '/payment-callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityRoute = CommunityRouteImport.update({
@@ -49,11 +54,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProgramsPaymentCallbackRoute = ProgramsPaymentCallbackRouteImport.update({
-  id: '/payment-callback',
-  path: '/payment-callback',
-  getParentRoute: () => ProgramsRoute,
-} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
@@ -70,22 +70,22 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/book': typeof BookRoute
   '/community': typeof CommunityRoute
-  '/programs': typeof ProgramsRouteWithChildren
+  '/payment-callback': typeof PaymentCallbackRoute
+  '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/login': typeof AdminLoginRoute
-  '/programs/payment-callback': typeof ProgramsPaymentCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/book': typeof BookRoute
   '/community': typeof CommunityRoute
-  '/programs': typeof ProgramsRouteWithChildren
+  '/payment-callback': typeof PaymentCallbackRoute
+  '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/login': typeof AdminLoginRoute
-  '/programs/payment-callback': typeof ProgramsPaymentCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,11 +93,11 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/book': typeof BookRoute
   '/community': typeof CommunityRoute
-  '/programs': typeof ProgramsRouteWithChildren
+  '/payment-callback': typeof PaymentCallbackRoute
+  '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/login': typeof AdminLoginRoute
-  '/programs/payment-callback': typeof ProgramsPaymentCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,33 +106,33 @@ export interface FileRouteTypes {
     | '/about'
     | '/book'
     | '/community'
+    | '/payment-callback'
     | '/programs'
     | '/services'
     | '/admin/dashboard'
     | '/admin/login'
-    | '/programs/payment-callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/book'
     | '/community'
+    | '/payment-callback'
     | '/programs'
     | '/services'
     | '/admin/dashboard'
     | '/admin/login'
-    | '/programs/payment-callback'
   id:
     | '__root__'
     | '/'
     | '/about'
     | '/book'
     | '/community'
+    | '/payment-callback'
     | '/programs'
     | '/services'
     | '/admin/dashboard'
     | '/admin/login'
-    | '/programs/payment-callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -140,7 +140,8 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   BookRoute: typeof BookRoute
   CommunityRoute: typeof CommunityRoute
-  ProgramsRoute: typeof ProgramsRouteWithChildren
+  PaymentCallbackRoute: typeof PaymentCallbackRoute
+  ProgramsRoute: typeof ProgramsRoute
   ServicesRoute: typeof ServicesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminLoginRoute: typeof AdminLoginRoute
@@ -160,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/programs'
       fullPath: '/programs'
       preLoaderRoute: typeof ProgramsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment-callback': {
+      id: '/payment-callback'
+      path: '/payment-callback'
+      fullPath: '/payment-callback'
+      preLoaderRoute: typeof PaymentCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community': {
@@ -190,13 +198,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/programs/payment-callback': {
-      id: '/programs/payment-callback'
-      path: '/payment-callback'
-      fullPath: '/programs/payment-callback'
-      preLoaderRoute: typeof ProgramsPaymentCallbackRouteImport
-      parentRoute: typeof ProgramsRoute
-    }
     '/admin/login': {
       id: '/admin/login'
       path: '/admin/login'
@@ -214,24 +215,13 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface ProgramsRouteChildren {
-  ProgramsPaymentCallbackRoute: typeof ProgramsPaymentCallbackRoute
-}
-
-const ProgramsRouteChildren: ProgramsRouteChildren = {
-  ProgramsPaymentCallbackRoute: ProgramsPaymentCallbackRoute,
-}
-
-const ProgramsRouteWithChildren = ProgramsRoute._addFileChildren(
-  ProgramsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   BookRoute: BookRoute,
   CommunityRoute: CommunityRoute,
-  ProgramsRoute: ProgramsRouteWithChildren,
+  PaymentCallbackRoute: PaymentCallbackRoute,
+  ProgramsRoute: ProgramsRoute,
   ServicesRoute: ServicesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminLoginRoute: AdminLoginRoute,
