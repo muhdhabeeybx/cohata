@@ -250,6 +250,18 @@ app.post("/api/users", authenticate, requireRole("admin"), async (req, res) => {
   }
 });
 
+app.patch("/api/users/:id", authenticate, requireRole("admin"), async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters" });
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: "Not found" });
+    user.passwordHash = await bcrypt.hash(password, 10);
+    await user.save();
+    res.json({ ok: true });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
 app.delete("/api/users/:id", authenticate, requireRole("admin"), async (req, res) => {
   try {
     if (req.params.id === req.user.id) return res.status(400).json({ error: "You cannot remove your own account" });

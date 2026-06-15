@@ -76,11 +76,11 @@ function Home() {
               COHATA guides Muslim women and families through coaching, mentorship, and structured programs —
               where faith isn't an add-on, it's the foundation. Wherever you're starting from, there's a place for you here.
             </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link to="/book" className="bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
+            <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <Link to="/book" className="w-full sm:w-auto justify-center bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
                 <Heart size={18} /> Book a Session
               </Link>
-              <Link to="/programs" className="border-2 border-primary text-primary px-7 py-4 rounded-full font-medium hover:bg-primary hover:text-primary-foreground transition inline-flex items-center gap-2">
+              <Link to="/programs" className="w-full sm:w-auto justify-center border-2 border-primary text-primary px-7 py-4 rounded-full font-medium hover:bg-primary hover:text-primary-foreground transition inline-flex items-center gap-2">
                 Explore Programs <ArrowRight size={18} />
               </Link>
             </div>
@@ -92,7 +92,7 @@ function Home() {
                 ["7yrs", "Of transformation"],
               ].map(([n, l]) => (
                 <div key={l}>
-                  <p className="font-display text-3xl text-primary">{n}</p>
+                  <p className="text-3xl text-primary">{n}</p>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{l}</p>
                 </div>
               ))}
@@ -108,7 +108,7 @@ function Home() {
               <Sparkles className="text-gold-foreground" size={22} />
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-gold-foreground/70">Qur'an 13:11</p>
-                <p className="font-display text-xl text-gold-foreground">Faith. Growth. Transformation.</p>
+                <p className="text-xl text-gold-foreground">Faith. Growth. Transformation.</p>
               </div>
             </div>
           </div>
@@ -137,7 +137,7 @@ function Home() {
                 <div className="w-12 h-12 rounded-xl bg-gold/20 text-gold flex items-center justify-center mb-5 group-hover:bg-gold group-hover:text-gold-foreground transition">
                   <Icon size={22} />
                 </div>
-                <h3 className="font-display text-xl mb-2 text-balance">{title}</h3>
+                <h3 className="text-xl mb-2 text-balance">{title}</h3>
                 <p className="text-primary-foreground/70 text-sm leading-relaxed mb-6 flex-1">{desc}</p>
                 <span className="text-sm text-gold inline-flex items-center gap-1 group-hover:gap-2 transition-all font-medium">
                   {cta} <ArrowRight size={14} />
@@ -164,7 +164,7 @@ function Home() {
                 <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center mb-5">
                   <Icon size={22} />
                 </div>
-                <h3 className="font-display text-2xl text-primary mb-2">{title}</h3>
+                <h3 className="text-2xl text-primary mb-2">{title}</h3>
                 <p className="text-foreground/70 text-sm leading-relaxed">{text}</p>
               </div>
             ))}
@@ -179,7 +179,7 @@ function Home() {
         <div className="relative h-full max-w-7xl mx-auto px-6 lg:px-10 flex items-center">
           <div className="max-w-xl">
             <Feather className="text-gold mb-6" size={32} />
-            <p className="font-display italic text-2xl md:text-4xl text-primary-foreground text-balance leading-snug">
+            <p className="italic text-2xl md:text-4xl text-primary-foreground text-balance leading-snug">
               "Indeed, Allah will not change the condition of a people until they change what is in themselves."
             </p>
             <p className="text-primary-foreground/70 mt-4 mb-8">— Qur'an 13:11</p>
@@ -211,7 +211,7 @@ function Home() {
                 <div className="w-12 h-12 rounded-xl bg-gold text-gold-foreground flex items-center justify-center mb-5">
                   <Icon size={22} />
                 </div>
-                <h3 className="font-display text-xl text-primary mb-2">{title}</h3>
+                <h3 className="text-xl text-primary mb-2">{title}</h3>
                 <p className="text-foreground/70 text-sm leading-relaxed mb-6 flex-1">{desc}</p>
                 <span className="text-sm text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all font-medium">
                   Learn more <ArrowRight size={14} />
@@ -240,10 +240,10 @@ function Home() {
             {steps.map(({ n, title, desc, icon: Icon }) => (
               <li key={n} className="bg-primary-foreground/[0.06] border border-primary-foreground/15 hover:border-gold/50 rounded-2xl p-6 transition">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-gold font-display text-2xl">{n}</span>
+                  <span className="text-gold text-2xl">{n}</span>
                   <Icon className="text-gold" size={20} />
                 </div>
-                <h3 className="font-display text-xl mb-2">{title}</h3>
+                <h3 className="text-xl mb-2">{title}</h3>
                 <p className="text-sm text-primary-foreground/70">{desc}</p>
               </li>
             ))}
@@ -261,7 +261,7 @@ function Home() {
             </div>
             <div className="absolute -top-6 -right-6 bg-primary text-primary-foreground rounded-2xl p-5 hidden md:flex items-center gap-3">
               <Users className="text-gold" size={22} />
-              <p className="font-display text-lg">1000+ women, one sisterhood</p>
+              <p className="text-lg">1000+ women, one sisterhood</p>
             </div>
           </div>
           <div className="lg:col-span-7 order-1 lg:order-2">
@@ -314,7 +314,7 @@ function Home() {
                 <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mb-6">
                   <Icon size={28} />
                 </div>
-                <h3 className="font-display text-2xl text-primary mb-2">{title}</h3>
+                <h3 className="text-2xl text-primary mb-2">{title}</h3>
                 <p className="text-foreground/70 mb-6 flex-1">{desc}</p>
                 <Link to={to} className="text-primary font-medium inline-flex items-center gap-2 hover:gap-3 transition-all">
                   {cta} <ArrowRight size={16} />
@@ -338,11 +338,11 @@ function Home() {
               <p className="text-white/60 max-w-xl mx-auto mb-10 text-pretty">
                 Book a free intro chat, explore a program, or simply join the community — however you begin, we're glad you're here.
               </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Link to="/book" className="bg-gold text-gold-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:justify-center gap-3 sm:gap-4">
+                <Link to="/book" className="w-full sm:w-auto justify-center bg-gold text-gold-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
                   <Calendar size={18} /> Book a Session
                 </Link>
-                <Link to="/about" className="border-2 border-white/25 text-white px-7 py-4 rounded-full font-medium hover:bg-white/10 transition inline-flex items-center gap-2">
+                <Link to="/about" className="w-full sm:w-auto justify-center border-2 border-white/25 text-white px-7 py-4 rounded-full font-medium hover:bg-white/10 transition inline-flex items-center gap-2">
                   Learn About COHATA <ArrowRight size={18} />
                 </Link>
               </div>

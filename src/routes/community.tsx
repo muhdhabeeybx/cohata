@@ -40,7 +40,7 @@ function Community() {
         ].map(({ icon: I, t, d }) => (
           <div key={t} className="bg-card border border-border rounded-3xl p-8 text-center">
             <I className="text-gold mx-auto mb-4" />
-            <h3 className="font-display text-xl text-primary mb-2">{t}</h3>
+            <h3 className="text-xl text-primary mb-2">{t}</h3>
             <p className="text-sm text-foreground/70">{d}</p>
           </div>
         ))}
@@ -53,7 +53,7 @@ function Community() {
               <div className="w-14 h-14 rounded-full bg-gradient-gold mx-auto flex items-center justify-center mb-4">
                 <Check className="text-gold-foreground" />
               </div>
-              <h3 className="font-display text-3xl mb-2">Welcome, sister.</h3>
+              <h3 className="text-3xl mb-2">Welcome, sister.</h3>
               <p className="text-primary-foreground/80">You'll receive your invitation link by email very soon, in shā' Allāh.</p>
             </div>
           ) : (

@@ -321,6 +321,11 @@ export function BookingsDashboard() {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [passwordError, setPasswordError] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<StaffUser | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetPasswordShow, setResetPasswordShow] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState("");
+  const [resetPasswordSaving, setResetPasswordSaving] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [maintenance, setMaintenance] = useState(false);
@@ -412,6 +417,25 @@ export function BookingsDashboard() {
     if (!confirm(`Remove ${u.name}'s access? This cannot be undone.`)) return;
     setUsers((prev) => prev.filter((x) => x.id !== u.id));
     await api.del(`/api/users/${u.id}`).catch(console.error);
+  };
+
+  const resetUserPassword = async () => {
+    if (!resetPasswordUser) return;
+    setResetPasswordError("");
+    if (resetPasswordValue.length < 8) {
+      setResetPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+    setResetPasswordSaving(true);
+    try {
+      await api.patch(`/api/users/${resetPasswordUser.id}`, { password: resetPasswordValue });
+      setResetPasswordUser(null);
+      setResetPasswordValue("");
+    } catch {
+      setResetPasswordError("Failed to reset password.");
+    } finally {
+      setResetPasswordSaving(false);
+    }
   };
 
   const changePassword = async () => {
@@ -1083,9 +1107,14 @@ export function BookingsDashboard() {
                 </span>
                 <span className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">{fmt(u.createdAt)}</span>
                 {u.id !== user?.id && (
-                  <button type="button" title="Remove access" onClick={() => removeUser(u)} className="h-8 w-8 flex-shrink-0 rounded-md border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center">
-                    <Trash2 size={13} />
-                  </button>
+                  <>
+                    <button type="button" title="Reset password" onClick={() => { setResetPasswordUser(u); setResetPasswordValue(""); setResetPasswordError(""); setResetPasswordShow(false); }} className="h-8 w-8 flex-shrink-0 rounded-md border border-border text-muted-foreground hover:bg-primary/8 hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center">
+                      <KeyRound size={13} />
+                    </button>
+                    <button type="button" title="Remove access" onClick={() => removeUser(u)} className="h-8 w-8 flex-shrink-0 rounded-md border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center">
+                      <Trash2 size={13} />
+                    </button>
+                  </>
                 )}
               </div>
             ))}
@@ -1617,6 +1646,49 @@ export function BookingsDashboard() {
               <Button variant="outline" onClick={() => setIsPasswordOpen(false)}>Cancel</Button>
               <Button onClick={changePassword} disabled={passwordSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {passwordSaving ? "Saving…" : "Update Password"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Modal (admin resetting a team member's password) */}
+      <Dialog open={!!resetPasswordUser} onOpenChange={(open) => { if (!open) { setResetPasswordUser(null); setResetPasswordValue(""); setResetPasswordError(""); setResetPasswordShow(false); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl" style={{ color: "var(--primary)" }}>Reset Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <p className="text-sm text-muted-foreground">
+              Set a new password for <span className="font-medium text-foreground">{resetPasswordUser?.name}</span>. Share it with them securely — they can change it from the dashboard afterwards.
+            </p>
+            <div>
+              <Label htmlFor="reset-pw">New Password</Label>
+              <div className="relative mt-1">
+                <Input
+                  id="reset-pw"
+                  type={resetPasswordShow ? "text" : "password"}
+                  autoComplete="new-password"
+                  placeholder="At least 8 characters"
+                  value={resetPasswordValue}
+                  onChange={(e) => setResetPasswordValue(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setResetPasswordShow((v) => !v)}
+                  aria-label={resetPasswordShow ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {resetPasswordShow ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            {resetPasswordError && <p className="text-sm text-red-600">{resetPasswordError}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setResetPasswordUser(null)}>Cancel</Button>
+              <Button onClick={resetUserPassword} disabled={resetPasswordSaving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                {resetPasswordSaving ? "Saving…" : "Reset Password"}
               </Button>
             </div>
           </div>

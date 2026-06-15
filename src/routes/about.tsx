@@ -69,11 +69,11 @@ function About() {
               development platform dedicated to helping Muslim women and families build lives rooted in
               clarity, structure, and intentional living.
             </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link to="/book" className="bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
+            <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <Link to="/book" className="w-full sm:w-auto justify-center bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
                 <Heart size={18} /> Book a Session
               </Link>
-              <Link to="/programs" className="border-2 border-primary text-primary px-7 py-4 rounded-full font-medium hover:bg-primary hover:text-primary-foreground transition inline-flex items-center gap-2">
+              <Link to="/programs" className="w-full sm:w-auto justify-center border-2 border-primary text-primary px-7 py-4 rounded-full font-medium hover:bg-primary hover:text-primary-foreground transition inline-flex items-center gap-2">
                 Explore Programs <ArrowRight size={18} />
               </Link>
             </div>
@@ -85,7 +85,7 @@ function About() {
             </div>
             <div className="absolute -bottom-6 -left-6 bg-gradient-gold rounded-2xl p-5 hidden md:flex items-center gap-3">
               <Quote className="text-gold-foreground" size={22} />
-              <p className="font-display text-lg text-gold-foreground max-w-[12rem] leading-snug">
+              <p className="text-lg text-gold-foreground max-w-[12rem] leading-snug">
                 "Every transformation begins with a single, honest step."
               </p>
             </div>
@@ -102,7 +102,7 @@ function About() {
               <Eye size={22} />
             </div>
             <p className="text-xs uppercase tracking-[0.25em] text-gold mb-4">Vision</p>
-            <p className="font-display text-2xl leading-relaxed text-balance">
+            <p className="text-2xl leading-relaxed text-balance">
               To become a leading global platform for faith-based transformation, raising Muslim
               women and families who are grounded in their identity, aligned in their lives, and
               impactful in their communities.
@@ -113,7 +113,7 @@ function About() {
               <Target size={22} />
             </div>
             <p className="text-xs uppercase tracking-[0.25em] text-gold mb-4">Mission</p>
-            <p className="font-display text-2xl leading-relaxed text-balance">
+            <p className="text-2xl leading-relaxed text-balance">
               To guide Muslim women and families through structured coaching, counseling, and
               development programs that foster spiritual growth, emotional stability, and
               intentional living rooted in Islamic principles.
@@ -127,7 +127,7 @@ function About() {
         <div className="max-w-7xl mx-auto px-6 lg:px-10 grid grid-cols-2 md:grid-cols-4 gap-8">
           {milestones.map(([n, l]) => (
             <div key={l} className="text-center">
-              <p className="font-display text-4xl md:text-5xl text-primary">{n}</p>
+              <p className="text-4xl md:text-5xl text-primary">{n}</p>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mt-2">{l}</p>
             </div>
           ))}
@@ -144,7 +144,7 @@ function About() {
             </div>
             <div className="absolute -top-6 -right-6 bg-primary text-primary-foreground rounded-2xl p-5 hidden md:flex items-center gap-3">
               <Sparkles className="text-gold" size={22} />
-              <p className="font-display text-lg">Meet Coach Halima</p>
+              <p className="text-lg">Meet Coach Halima</p>
             </div>
           </div>
           <div className="lg:col-span-7">
@@ -184,7 +184,7 @@ function About() {
                 <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <Icon size={22} />
                 </div>
-                <p className="font-display text-xl md:text-2xl text-primary/90 leading-snug">{text}</p>
+                <p className="text-xl md:text-2xl text-primary/90 leading-snug">{text}</p>
               </li>
             ))}
           </ul>
@@ -206,7 +206,7 @@ function About() {
                 <div className="w-12 h-12 rounded-xl bg-gold text-gold-foreground flex items-center justify-center mb-5">
                   <Icon size={22} />
                 </div>
-                <h3 className="font-display text-xl text-primary mb-2">{title}</h3>
+                <h3 className="text-xl text-primary mb-2">{title}</h3>
                 <p className="text-foreground/70 text-sm leading-relaxed">{text}</p>
               </div>
             ))}
@@ -227,11 +227,11 @@ function About() {
               <p className="text-white/60 max-w-xl mx-auto mb-10 text-pretty">
                 Whether it's a conversation, a program, or a community — your first step starts here.
               </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Link to="/book" className="bg-gold text-gold-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:justify-center gap-3 sm:gap-4">
+                <Link to="/book" className="w-full sm:w-auto justify-center bg-gold text-gold-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
                   <Heart size={18} /> Begin Your Journey
                 </Link>
-                <Link to="/programs" className="border-2 border-white/25 text-white px-7 py-4 rounded-full font-medium hover:bg-white/10 transition inline-flex items-center gap-2">
+                <Link to="/programs" className="w-full sm:w-auto justify-center border-2 border-white/25 text-white px-7 py-4 rounded-full font-medium hover:bg-white/10 transition inline-flex items-center gap-2">
                   Explore Programs <ArrowRight size={18} />
                 </Link>
               </div>

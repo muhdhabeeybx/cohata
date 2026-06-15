@@ -17,6 +17,7 @@ import { Route as BookRouteImport } from './routes/book'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminForgotPasswordRouteImport } from './routes/admin.forgot-password'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 
 const ServicesRoute = ServicesRouteImport.update({
@@ -59,6 +60,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminForgotPasswordRoute = AdminForgotPasswordRouteImport.update({
+  id: '/admin/forgot-password',
+  path: '/admin/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/admin/dashboard',
   path: '/admin/dashboard',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/forgot-password': typeof AdminForgotPasswordRoute
   '/admin/login': typeof AdminLoginRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/forgot-password': typeof AdminForgotPasswordRoute
   '/admin/login': typeof AdminLoginRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/forgot-password': typeof AdminForgotPasswordRoute
   '/admin/login': typeof AdminLoginRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/programs'
     | '/services'
     | '/admin/dashboard'
+    | '/admin/forgot-password'
     | '/admin/login'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/programs'
     | '/services'
     | '/admin/dashboard'
+    | '/admin/forgot-password'
     | '/admin/login'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/programs'
     | '/services'
     | '/admin/dashboard'
+    | '/admin/forgot-password'
     | '/admin/login'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   ProgramsRoute: typeof ProgramsRoute
   ServicesRoute: typeof ServicesRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminForgotPasswordRoute: typeof AdminForgotPasswordRoute
   AdminLoginRoute: typeof AdminLoginRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/forgot-password': {
+      id: '/admin/forgot-password'
+      path: '/admin/forgot-password'
+      fullPath: '/admin/forgot-password'
+      preLoaderRoute: typeof AdminForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/admin/dashboard'
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProgramsRoute: ProgramsRoute,
   ServicesRoute: ServicesRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminForgotPasswordRoute: AdminForgotPasswordRoute,
   AdminLoginRoute: AdminLoginRoute,
 }
 export const routeTree = rootRouteImport

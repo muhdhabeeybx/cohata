@@ -123,7 +123,7 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
             <div className="w-14 h-14 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center mb-4">
               <Check size={24} />
             </div>
-            <h3 className="font-display text-2xl text-primary mb-2">JazākAllāhu khayran</h3>
+            <h3 className="text-2xl text-primary mb-2">JazākAllāhu khayran</h3>
             <p className="text-foreground/70 mb-6">
               We've received your enrollment for <strong>{program.title}</strong>. Our team will reach out shortly with next steps.
             </p>
@@ -136,7 +136,7 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
             <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-4">
               <Check size={24} />
             </div>
-            <h3 className="font-display text-2xl text-primary mb-2">JazākAllāhu khayran!</h3>
+            <h3 className="text-2xl text-primary mb-2">JazākAllāhu khayran!</h3>
             <p className="text-foreground/70 mb-6">
               Your payment{paidAmount ? ` of ${formatNaira(paidAmount)}` : ""} was successful and your enrollment for <strong>{program.title}</strong> is confirmed. Our team will reach out shortly with next steps.
             </p>
@@ -149,7 +149,7 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
             <div className="w-14 h-14 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center mb-4">
               <X size={24} />
             </div>
-            <h3 className="font-display text-2xl text-primary mb-2">Payment not completed</h3>
+            <h3 className="text-2xl text-primary mb-2">Payment not completed</h3>
             <p className="text-foreground/70 mb-6">
               Your payment could not be confirmed. If you were charged, please contact us and we'll sort it out — otherwise, feel free to try again.
             </p>
@@ -165,7 +165,7 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
             <div className="flex items-start justify-between mb-6">
               <div>
                 {program.tag && <p className="text-xs uppercase tracking-[0.3em] text-gold mb-1">{program.tag}</p>}
-                <h3 className="font-display text-2xl text-primary">{program.title}</h3>
+                <h3 className="text-2xl text-primary">{program.title}</h3>
                 {isPaid && (
                   <p className="text-sm text-foreground/60 mt-1">Enrollment fee: <strong className="text-foreground">{formatNaira(program.amount)}</strong></p>
                 )}

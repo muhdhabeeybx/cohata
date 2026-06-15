@@ -15,9 +15,10 @@ const nav = [
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-md bg-background/80 border-b border-border/60">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 h-20 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
+    <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border/60">
+      <div className="h-[2px] bg-gradient-gold" />
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 h-20 flex items-center justify-between gap-8">
+        <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
           <img src={logo} alt="COHATA — Coach Halima Transformational Academy" className="h-10 md:h-12 w-auto" />
           <span className="sr-only">COHATA</span>
         </Link>
@@ -27,31 +28,25 @@ export function SiteHeader() {
             <Link
               key={n.to}
               to={n.to}
-              className="text-sm text-foreground/70 hover:text-primary transition-colors"
-              activeProps={{ className: "text-primary font-medium" }}
+              className="group relative py-2 text-sm font-medium text-foreground/65 transition-colors hover:text-primary"
+              activeProps={{ className: "text-primary" }}
               activeOptions={{ exact: n.to === "/" }}
             >
               {n.label}
+              <span className="absolute inset-x-0 -bottom-0.5 h-[2px] origin-center scale-x-0 bg-gold transition-transform duration-300 group-hover:scale-x-100 group-data-[status=active]:scale-x-100" />
             </Link>
           ))}
-          <div className="flex items-center gap-4 pl-4 border-l border-border/40">
-            <Link
-              to="/admin/dashboard"
-              className="text-xs text-foreground/50 hover:text-foreground/80 transition-colors"
-              activeProps={{ className: "text-foreground font-medium" }}
-            >
-              Admin
-            </Link>
-            <Link
-              to="/book"
-              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-full text-sm font-medium hover:opacity-90 transition shadow-soft"
-            >
-              Begin Your Journey
-            </Link>
-          </div>
         </nav>
 
+        <Link
+          to="/book"
+          className="hidden lg:inline-flex flex-shrink-0 items-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-soft transition hover:opacity-90"
+        >
+          Begin Your Journey
+        </Link>
+
         <button
+          type="button"
           className="lg:hidden text-primary"
           onClick={() => setOpen(!open)}
           aria-label="Menu"
@@ -62,17 +57,26 @@ export function SiteHeader() {
 
       {open && (
         <div className="lg:hidden border-t border-border bg-background">
-          <div className="px-6 py-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-1 px-6 py-4">
             {nav.map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
                 onClick={() => setOpen(false)}
-                className="py-2 text-foreground/80"
+                className="border-b border-border/40 py-3 text-sm font-medium text-foreground/70 transition-colors last:border-0 hover:text-primary"
+                activeProps={{ className: "text-primary" }}
+                activeOptions={{ exact: n.to === "/" }}
               >
                 {n.label}
               </Link>
             ))}
+            <Link
+              to="/book"
+              onClick={() => setOpen(false)}
+              className="mt-3 inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
+            >
+              Begin Your Journey
+            </Link>
           </div>
         </div>
       )}

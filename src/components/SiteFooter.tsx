@@ -11,7 +11,7 @@ export function SiteFooter() {
         <div className="grid lg:grid-cols-12 gap-12 mb-16">
           <div className="lg:col-span-5">
             <p className="text-xs uppercase tracking-[0.3em] text-gold mb-4">Stay Connected</p>
-            <h3 className="font-display text-3xl md:text-4xl mb-4 text-balance">
+            <h3 className="text-3xl md:text-4xl mb-4 text-balance">
               Reflections, reminders & program updates — delivered with intention.
             </h3>
             <p className="text-primary-foreground/70 mb-6 text-pretty">
@@ -63,7 +63,7 @@ export function SiteFooter() {
 
           <div className="lg:col-span-3">
             <p className="text-xs uppercase tracking-[0.2em] text-gold mb-4">Brand Essence</p>
-            <p className="font-display text-xl text-primary-foreground/90">
+            <p className="text-xl text-primary-foreground/90">
               Faith. Growth. Transformation.
             </p>
           </div>
@@ -71,7 +71,7 @@ export function SiteFooter() {
 
         <div className="border-t border-primary-foreground/15 pt-8 flex flex-col md:flex-row justify-between gap-4 text-sm text-primary-foreground/60">
           <p suppressHydrationWarning>© {new Date().getFullYear()} COHATA — Coach Halima Transformational Academy.</p>
-          <p className="font-display italic">In every reflection, an invitation to return.</p>
+          <p className="italic">In every reflection, an invitation to return.</p>
         </div>
       </div>
     </footer>

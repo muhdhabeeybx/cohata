@@ -129,7 +129,7 @@ function Book() {
                 A confirmation has been sent to <strong>{info.email}</strong>. We'll reach out shortly with the meeting link, in shā' Allāh.
               </p>
               <div className="inline-block bg-gradient-soft border border-border rounded-2xl px-6 py-4 text-left">
-                <p className="font-display text-xl text-primary">{selectedType?.name}</p>
+                <p className="text-xl text-primary">{selectedType?.name}</p>
                 <p className="text-sm text-foreground/70 mt-1">{date} · {time}</p>
               </div>
             </div>
@@ -145,7 +145,7 @@ function Book() {
                     className={`text-left p-5 rounded-2xl border-2 transition ${type === s.id ? "border-primary bg-accent" : "border-border hover:border-primary/40"}`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-display text-lg text-primary">{s.name}</h3>
+                      <h3 className="text-lg text-primary">{s.name}</h3>
                       <span className="text-xs text-gold flex items-center gap-1"><Clock size={12} />{s.duration}</span>
                     </div>
                     <p className="text-sm text-foreground/70">{s.desc}</p>
@@ -234,7 +234,7 @@ function Book() {
               </div>
               <div className="bg-gradient-soft border border-border rounded-2xl p-5 mt-6 text-sm">
                 <p className="text-muted-foreground">You're booking:</p>
-                <p className="font-display text-lg text-primary">{selectedType?.name}</p>
+                <p className="text-lg text-primary">{selectedType?.name}</p>
                 <p className="text-foreground/70">{date} · {time}</p>
               </div>
               <div className="flex justify-between mt-8">

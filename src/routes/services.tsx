@@ -93,11 +93,11 @@ function Services() {
               Each offering is structured, intentional, and rooted in Islamic principles — designed to
               meet you where you are and walk with you toward where Allah is calling you to be.
             </p>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link to="/book" className="bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
+            <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <Link to="/book" className="w-full sm:w-auto justify-center bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
                 Book a Session
               </Link>
-              <Link to="/programs" className="border-2 border-primary text-primary px-7 py-4 rounded-full font-medium hover:bg-primary hover:text-primary-foreground transition inline-flex items-center gap-2">
+              <Link to="/programs" className="w-full sm:w-auto justify-center border-2 border-primary text-primary px-7 py-4 rounded-full font-medium hover:bg-primary hover:text-primary-foreground transition inline-flex items-center gap-2">
                 See Our Programs
               </Link>
             </div>
@@ -123,7 +123,7 @@ function Services() {
                       <g.icon size={20} />
                     </div>
                     <div className="flex items-baseline gap-4">
-                      <span className="font-display text-2xl text-gold">{g.n}</span>
+                      <span className="text-2xl text-gold">{g.n}</span>
                       <h2 className="font-display text-3xl md:text-4xl text-primary text-balance">{g.title}</h2>
                     </div>
                   </div>
@@ -168,11 +168,11 @@ function Services() {
               <p className="text-white/60 max-w-xl mx-auto mb-10 text-pretty">
                 Book a discovery session and we'll guide you to the path that fits your season — no guesswork, just clarity.
               </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Link to="/book" className="bg-gold text-gold-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:justify-center gap-3 sm:gap-4">
+                <Link to="/book" className="w-full sm:w-auto justify-center bg-gold text-gold-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
                   <Calendar size={18} /> Book a Discovery Session
                 </Link>
-                <Link to="/programs" className="border-2 border-white/25 text-white px-7 py-4 rounded-full font-medium hover:bg-white/10 transition inline-flex items-center gap-2">
+                <Link to="/programs" className="w-full sm:w-auto justify-center border-2 border-white/25 text-white px-7 py-4 rounded-full font-medium hover:bg-white/10 transition inline-flex items-center gap-2">
                   Browse Programs <ArrowRight size={18} />
                 </Link>
               </div>

@@ -1,5 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import logo from "@/assets/cohata-logo.png";
 
@@ -15,6 +16,7 @@ function AdminLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,16 +62,31 @@ function AdminLogin() {
               />
             </div>
             <div>
-              <label htmlFor="password" className="text-sm font-medium text-foreground">Password</label>
-              <input
-                id="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full mt-1 px-3 py-2.5 text-sm rounded-xl border border-input bg-background focus:outline-none focus:border-primary"
-              />
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">Password</label>
+                <Link to="/admin/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative mt-1">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-input bg-background focus:outline-none focus:border-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
