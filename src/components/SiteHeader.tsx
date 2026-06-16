@@ -15,7 +15,7 @@ const nav = [
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border/60">
+    <header className="sticky top-0 z-40 backdrop-blur-md bg-card/90 shadow-soft">
       <div className="h-[2px] bg-gradient-gold" />
       <div className="max-w-7xl mx-auto px-6 lg:px-10 h-20 flex items-center justify-between gap-8">
         <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
@@ -56,7 +56,7 @@ export function SiteHeader() {
       </div>
 
       {open && (
-        <div className="lg:hidden border-t border-border bg-background">
+        <div className="lg:hidden border-t border-border bg-card">
           <div className="flex flex-col gap-1 px-6 py-4">
             {nav.map((n) => (
               <Link

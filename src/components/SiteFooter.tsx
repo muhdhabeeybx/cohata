@@ -11,13 +11,13 @@ export function SiteFooter() {
         <div className="grid lg:grid-cols-12 gap-12 mb-16">
           <div className="lg:col-span-5">
             <p className="text-xs uppercase tracking-[0.3em] text-gold mb-4">Stay Connected</p>
-            <h3 className="text-3xl md:text-4xl mb-4 text-balance">
+            <h3 className="text-2xl md:text-3xl mb-4 text-balance">
               Reflections, reminders & program updates — delivered with intention.
             </h3>
-            <p className="text-primary-foreground/70 mb-6 text-pretty">
+            {/* <p className="text-primary-foreground/70 mb-6 text-pretty">
               Join thousands of Muslim women receiving guidance, structured reflections, and early
               access to COHATA programs.
-            </p>
+            </p> */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -63,15 +63,25 @@ export function SiteFooter() {
 
           <div className="lg:col-span-3">
             <p className="text-xs uppercase tracking-[0.2em] text-gold mb-4">Brand Essence</p>
-            <p className="text-xl text-primary-foreground/90">
+            <h3 className="text-xl text-primary-foreground/90">
               Faith. Growth. Transformation.
-            </p>
+            </h3>
           </div>
         </div>
 
         <div className="border-t border-primary-foreground/15 pt-8 flex flex-col md:flex-row justify-between gap-4 text-sm text-primary-foreground/60">
-          <p suppressHydrationWarning>© {new Date().getFullYear()} COHATA — Coach Halima Transformational Academy.</p>
-          <p className="italic">In every reflection, an invitation to return.</p>
+          <p suppressHydrationWarning>© {new Date().getFullYear()} Coach Halima Transformational Academy.</p>
+          <p>
+            ✦ Site by{" "}
+            <a
+              href="https://sableboxx.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-accent transition-colors"
+            >
+              SableBoxx
+            </a>
+          </p>
         </div>
       </div>
     </footer>

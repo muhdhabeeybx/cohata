@@ -827,7 +827,7 @@ export function BookingsDashboard() {
                 <CalendarCheck size={16} />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground text-sm">Working Days</h3>
+                <h3 className="font-sans font-semibold text-foreground text-sm">Working Days</h3>
                 <p className="text-xs text-muted-foreground">Choose the days clients can book sessions with you.</p>
               </div>
             </div>
@@ -850,7 +850,7 @@ export function BookingsDashboard() {
                 <Clock size={16} />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground text-sm">Working Hours & Session Length</h3>
+                <h3 className="font-sans font-semibold text-foreground text-sm">Working Hours & Session Length</h3>
                 <p className="text-xs text-muted-foreground">Sessions are auto-generated as back-to-back slots within these hours.</p>
               </div>
             </div>
@@ -881,7 +881,7 @@ export function BookingsDashboard() {
                 <CalendarOff size={16} />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground text-sm">Days Off / Blocked Dates</h3>
+                <h3 className="font-sans font-semibold text-foreground text-sm">Days Off / Blocked Dates</h3>
                 <p className="text-xs text-muted-foreground">Block specific dates — holidays, leave, or fully booked days.</p>
               </div>
             </div>
@@ -912,7 +912,7 @@ export function BookingsDashboard() {
                 <Settings2 size={16} />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground text-sm">Daily Slot Preview</h3>
+                <h3 className="font-sans font-semibold text-foreground text-sm">Daily Slot Preview</h3>
                 <p className="text-xs text-muted-foreground">What clients will see on a working day</p>
               </div>
             </div>
@@ -945,7 +945,7 @@ export function BookingsDashboard() {
             const dates = programDates[prog] ?? [];
             return (
               <div key={prog} className="bg-card border border-border rounded-2xl p-5 space-y-3">
-                <h3 className="font-medium text-sm text-foreground leading-snug">{prog}</h3>
+                <h3 className="font-sans font-medium text-sm text-foreground leading-snug">{prog}</h3>
                 {dates.length === 0 ? (
                   <p className="text-xs text-muted-foreground">No dates set.</p>
                 ) : (
@@ -1001,7 +1001,7 @@ export function BookingsDashboard() {
             <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mx-auto mb-4">
               <BookOpen size={24} />
             </div>
-            <h3 className="font-semibold text-foreground mb-1">No programs yet</h3>
+            <h3 className="font-sans font-semibold text-foreground mb-1">No programs yet</h3>
             <p className="text-sm text-muted-foreground mb-5">Add your first program and it'll appear on the website instantly.</p>
             <Button onClick={openAddProgram} className="bg-primary text-primary-foreground">
               <Plus size={14} className="mr-1.5" /> Add Program
@@ -1035,7 +1035,7 @@ export function BookingsDashboard() {
                 {/* Body */}
                 <div className="p-4 flex flex-col flex-1">
                   {p.tag && <p className="text-[11px] uppercase tracking-widest text-gold mb-1 font-medium">{p.tag}</p>}
-                  <h3 className="font-semibold text-foreground text-sm leading-snug mb-1.5">{p.title}</h3>
+                  <h3 className="font-sans font-semibold text-foreground text-sm leading-snug mb-1.5">{p.title}</h3>
                   <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{p.description || <span className="italic">No description</span>}</p>
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2.5 mb-3">
@@ -1084,7 +1084,7 @@ export function BookingsDashboard() {
             <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mx-auto mb-4">
               <ShieldCheck size={24} />
             </div>
-            <h3 className="font-semibold text-foreground mb-1">No team members yet</h3>
+            <h3 className="font-sans font-semibold text-foreground mb-1">No team members yet</h3>
             <p className="text-sm text-muted-foreground mb-5">Add staff accounts so they can sign in to the dashboard.</p>
             <Button onClick={() => { setUserForm(emptyUserForm()); setIsUserOpen(true); }} className="bg-primary text-primary-foreground">
               <Plus size={14} className="mr-1.5" /> Add Team Member
