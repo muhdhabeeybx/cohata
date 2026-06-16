@@ -4,7 +4,6 @@ import { useAuth, ROLE_LABELS, type Role } from "@/lib/auth";
 import {
   LayoutDashboard,
   Users,
-  CalendarDays,
   Phone,
   MessageCircle,
   Plus,
@@ -36,6 +35,12 @@ import {
   ShieldCheck,
   LogOut,
   KeyRound,
+  Layers,
+  Minus,
+  DollarSign,
+  CreditCard,
+  GraduationCap,
+  ArrowUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +55,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -67,6 +73,8 @@ export interface Booking {
   enrollmentDate: string;
   sessionDate?: string;
   sessionTime?: string;
+  hours?: number;
+  amountDue?: number;
   notes?: string;
   paymentStatus?: string;
   paymentReference?: string;
@@ -92,9 +100,6 @@ export interface Program {
   createdAt: string;
 }
 
-interface ProgramDates {
-  [program: string]: string[];
-}
 
 export interface Availability {
   days: string[];
@@ -112,7 +117,19 @@ interface StaffUser {
   createdAt: string;
 }
 
-type View = "overview" | "bookings" | "availability" | "schedule" | "programs" | "team";
+export interface SessionTypeData {
+  id: string;
+  name: string;
+  description: string;
+  pricePerHour: number;
+  minHours: number;
+  maxHours: number;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+}
+
+type View = "overview" | "bookings" | "enrollments" | "payments" | "availability" | "programs" | "team" | "sessions";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -153,36 +170,23 @@ const PROGRAMS = [
   "Ahlul Jannah Summer Mentorship",
 ];
 
-const STATUSES = [
-  "Pending",
-  "Approved",
-  "Scheduled",
-  "In Progress",
-  "Completed",
-  "Declined",
-  "Cancelled",
-];
+const STATUSES = ["Pending", "Approved", "Cancelled"];
 
-const STATUS_CFG: Record<
-  string,
-  { bg: string; text: string; border: string; dot: string; Icon: any }
-> = {
-  Pending:        { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   dot: "bg-amber-400",   Icon: Timer },
-  Approved:       { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500", Icon: CheckCircle2 },
-  Scheduled:      { bg: "bg-blue-50",    text: "text-blue-700",    border: "border-blue-200",    dot: "bg-blue-500",    Icon: Calendar },
-  "In Progress":  { bg: "bg-violet-50",  text: "text-violet-700",  border: "border-violet-200",  dot: "bg-violet-500",  Icon: PlayCircle },
-  Completed:      { bg: "bg-teal-50",    text: "text-teal-700",    border: "border-teal-200",    dot: "bg-teal-500",    Icon: Check },
-  Declined:       { bg: "bg-red-50",     text: "text-red-700",     border: "border-red-200",     dot: "bg-red-500",     Icon: XCircle },
-  Cancelled:      { bg: "bg-gray-100",   text: "text-gray-600",    border: "border-gray-200",    dot: "bg-gray-400",    Icon: Ban },
+const STATUS_CFG: Record<string, { bg: string; text: string; border: string; dot: string; Icon: any }> = {
+  Pending:   { bg: "bg-amber-50",   text: "text-amber-700",   border: "border-amber-200",   dot: "bg-amber-400",   Icon: Timer },
+  Approved:  { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500", Icon: CheckCircle2 },
+  Cancelled: { bg: "bg-gray-100",   text: "text-gray-600",    border: "border-gray-200",    dot: "bg-gray-400",    Icon: Ban },
 };
 
-const NAV: { id: View; label: string; Icon: typeof LayoutDashboard; roles: Role[] }[] = [
-  { id: "overview",     label: "Overview",       Icon: LayoutDashboard, roles: ["admin", "finance", "bookings"] },
-  { id: "bookings",     label: "Bookings",       Icon: Users,           roles: ["admin", "finance", "bookings"] },
-  { id: "availability", label: "Availability",   Icon: Clock,           roles: ["admin", "bookings"] },
-  { id: "schedule",     label: "Program Intake", Icon: CalendarDays,    roles: ["admin", "bookings", "programs"] },
-  { id: "programs",     label: "Programs CMS",   Icon: BookOpen,        roles: ["admin", "programs"] },
-  { id: "team",         label: "Team & Access",  Icon: ShieldCheck,     roles: ["admin"] },
+const NAV: { id: View; label: string; sub: string; Icon: typeof LayoutDashboard; roles: Role[] }[] = [
+  { id: "overview",     label: "Overview",           sub: "Your practice at a glance",          Icon: LayoutDashboard, roles: ["admin", "finance", "bookings", "programs"] },
+  { id: "bookings",     label: "Session Bookings",            sub: "1:1 session appointments",            Icon: Calendar,        roles: ["admin", "bookings"] },
+  { id: "enrollments",  label: "Program Enrollments",         sub: "Program enrollment requests",         Icon: GraduationCap,   roles: ["admin", "programs", "bookings"] },
+  { id: "payments",     label: "Manage Payments",            sub: "All payment transactions",             Icon: CreditCard,      roles: ["admin", "finance"] },
+  { id: "availability", label: "Manage Availability",        sub: "Manage your schedule windows",        Icon: Clock,           roles: ["admin", "bookings"] },
+  { id: "programs",     label: "Manage Programs",        sub: "Manage courses and offerings",        Icon: BookOpen,        roles: ["admin", "programs"] },
+  { id: "sessions",     label: "Manage Sessions",       sub: "Configure pricing and durations",     Icon: Layers,          roles: ["admin", "bookings"] },
+  { id: "team",         label: "Manage Team & Access",       sub: "Staff accounts and permissions",      Icon: ShieldCheck,     roles: ["admin"] },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -275,6 +279,10 @@ function emptyUserForm() {
   return { name: "", email: "", password: "", role: "bookings" as Role };
 }
 
+function emptySessionTypeForm() {
+  return { name: "", description: "", pricePerHour: 0, minHours: 1, maxHours: 4, isActive: true, order: 0 };
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function BookingsDashboard() {
@@ -293,7 +301,6 @@ export function BookingsDashboard() {
 
   // Bookings state
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [programDates, setProgramDates] = useState<ProgramDates>({});
   const [availability, setAvailability] = useState<Availability>(DEFAULT_AVAILABILITY);
   const [blockedDateInput, setBlockedDateInput] = useState("");
   const [selected, setSelected] = useState<Booking | null>(null);
@@ -302,7 +309,6 @@ export function BookingsDashboard() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [tempNotes, setTempNotes] = useState("");
-  const [dateInputs, setDateInputs] = useState<Record<string, string>>({});
   const [form, setForm] = useState(emptyForm());
 
   // Programs CMS state
@@ -312,6 +318,13 @@ export function BookingsDashboard() {
   const [programForm, setProgramForm] = useState(emptyProgramForm());
   const [programImageTab, setProgramImageTab] = useState<"url" | "upload">("url");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Session types state
+  const [sessionTypes, setSessionTypes] = useState<SessionTypeData[]>([]);
+  const [isSessionTypeOpen, setIsSessionTypeOpen] = useState(false);
+  const [sessionTypeEditId, setSessionTypeEditId] = useState<string | null>(null);
+  const [sessionTypeForm, setSessionTypeForm] = useState(emptySessionTypeForm());
+  const [sessionTypeSaving, setSessionTypeSaving] = useState(false);
 
   // Team / access state
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -335,10 +348,10 @@ export function BookingsDashboard() {
     setLoading(true);
     try {
       const tasks: Record<string, Promise<unknown>> = {
-        programDates: api.get<ProgramDates>("/api/program-dates"),
         availability: api.get<Availability>("/api/availability"),
         programs: api.get<Program[]>("/api/programs?all=true"),
         maintenance: api.get<{ enabled: boolean }>("/api/maintenance"),
+        sessionTypes: api.get<SessionTypeData[]>("/api/session-types/all"),
       };
       if (canViewBookings) tasks.bookings = api.get<Booking[]>("/api/bookings");
       if (isAdmin) tasks.users = api.get<StaffUser[]>("/api/users");
@@ -353,11 +366,11 @@ export function BookingsDashboard() {
         }
         switch (key) {
           case "bookings": setBookings(r.value as Booking[]); break;
-          case "programDates": setProgramDates(r.value as ProgramDates); break;
           case "availability": setAvailability({ ...DEFAULT_AVAILABILITY, ...(r.value as Availability) }); break;
           case "programs": setPrograms(r.value as Program[]); break;
           case "maintenance": setMaintenance((r.value as { enabled: boolean }).enabled); break;
           case "users": setUsers(r.value as StaffUser[]); break;
+          case "sessionTypes": setSessionTypes(r.value as SessionTypeData[]); break;
         }
       });
     } finally {
@@ -463,11 +476,6 @@ export function BookingsDashboard() {
     await api.put("/api/availability", a).catch(console.error);
   };
 
-  const persistDates = async (d: ProgramDates) => {
-    setProgramDates(d);
-    await api.put("/api/program-dates", d).catch(console.error);
-  };
-
   const toggleDay = (key: string) => {
     const days = availability.days.includes(key)
       ? availability.days.filter((d) => d !== key)
@@ -524,18 +532,6 @@ export function BookingsDashboard() {
     }
   };
 
-  const addProgramDate = (program: string) => {
-    const d = dateInputs[program];
-    if (!d) return;
-    const existing = programDates[program] ?? [];
-    if (!existing.includes(d)) persistDates({ ...programDates, [program]: [...existing, d].sort() });
-    setDateInputs((prev) => ({ ...prev, [program]: "" }));
-  };
-
-  const removeProgramDate = (program: string, date: string) => {
-    persistDates({ ...programDates, [program]: (programDates[program] ?? []).filter((d) => d !== date) });
-  };
-
   // ── Programs CMS mutations ──────────────────────────────────────────────────
 
   const openAddProgram = () => {
@@ -550,7 +546,7 @@ export function BookingsDashboard() {
       title: p.title, tag: p.tag, description: p.description,
       fullDescription: p.fullDescription, duration: p.duration,
       startDate: p.startDate, amount: p.amount ? p.amount.toLocaleString("en-NG") : "", imageUrl: p.imageUrl,
-      status: p.status, enrollmentOpen: p.enrollmentOpen,
+      status: p.status as "active", enrollmentOpen: p.enrollmentOpen,
     });
     setProgramEditId(p.id);
     setProgramImageTab(p.imageUrl.startsWith("data:") ? "upload" : "url");
@@ -607,7 +603,12 @@ export function BookingsDashboard() {
 
   // ── Derived state ───────────────────────────────────────────────────────────
 
-  const filtered = bookings.filter((b) => {
+  // Session bookings have a sessionDate; program enrollments don't
+  const sessionBookings = bookings.filter((b) => !!b.sessionDate && !!b.sessionTime);
+  const enrollmentBookings = bookings.filter((b) => !b.sessionDate || !b.sessionTime);
+  const paymentBookings = bookings.filter((b) => !!b.paymentStatus);
+
+  const filtered = (view === "enrollments" ? enrollmentBookings : sessionBookings).filter((b) => {
     const matchStatus = filterStatus === "All" || b.status === filterStatus;
     const q = search.toLowerCase();
     const matchSearch = !search || b.name.toLowerCase().includes(q) || b.phone.includes(q) || b.program.toLowerCase().includes(q);
@@ -615,17 +616,18 @@ export function BookingsDashboard() {
   });
 
   const stats = {
-    total: bookings.length,
+    sessions: sessionBookings.length,
+    enrollments: enrollmentBookings.length,
     pending: bookings.filter((b) => b.status === "Pending").length,
-    active: bookings.filter((b) => ["Approved", "Scheduled", "In Progress"].includes(b.status)).length,
-    completed: bookings.filter((b) => b.status === "Completed").length,
+    approved: bookings.filter((b) => b.status === "Approved").length,
+    revenue: paymentBookings.filter((b) => b.paymentStatus === "paid").reduce((sum, b) => sum + (b.amountPaid ?? b.amountDue ?? 0), 0),
   };
 
   const recent = [...bookings].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
 
   const today = new Date().toISOString().split("T")[0];
-  const upcoming = [...bookings]
-    .filter((b) => b.sessionDate && b.sessionDate >= today && ["Approved", "Scheduled"].includes(b.status))
+  const upcoming = [...sessionBookings]
+    .filter((b) => b.sessionDate && b.sessionDate >= today && b.status === "Approved")
     .sort((a, b) => `${a.sessionDate}T${a.sessionTime ?? ""}`.localeCompare(`${b.sessionDate}T${b.sessionTime ?? ""}`))
     .slice(0, 6);
 
@@ -641,7 +643,7 @@ export function BookingsDashboard() {
             <p className="text-xs uppercase tracking-[0.2em] text-gold" suppressHydrationWarning>
               {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
             </p>
-            <h2 className="font-display text-2xl mt-1">Welcome back, Coach Halima</h2>
+            <h2 className="font-display text-2xl mt-1">Welcome back 👋</h2>
             <p className="text-sm text-primary-foreground/70 mt-1 flex items-center gap-2">
               <Clock size={13} />
               Available {availability.days.map((d) => DAY_LABELS_SHORT[d]).join(" · ")} · {availability.startTime}–{availability.endTime} · {slotsPerDay} session{slotsPerDay !== 1 ? "s" : ""}/day
@@ -654,12 +656,12 @@ export function BookingsDashboard() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: "Total Bookings", value: stats.total, Icon: Inbox, color: "text-foreground", bg: "bg-card" },
-            { label: "Pending Review", value: stats.pending, Icon: Timer, color: "text-amber-600", bg: "bg-amber-50" },
-            { label: "Active / Enrolled", value: stats.active, Icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Completed", value: stats.completed, Icon: CheckCircle2, color: "text-teal-600", bg: "bg-teal-50" },
-          ].map(({ label, value, Icon, color, bg }) => (
-            <div key={label} className={`${bg} rounded-2xl border border-border p-5 flex flex-col gap-3`}>
+            { label: "Sessions booked", value: stats.sessions,     Icon: Calendar,     color: "text-primary",      bg: "bg-card",        click: () => setView("bookings") },
+            { label: "Enrollments",      value: stats.enrollments,  Icon: GraduationCap, color: "text-violet-600", bg: "bg-violet-50",   click: () => setView("enrollments") },
+            { label: "Pending review",   value: stats.pending,      Icon: Timer,         color: "text-amber-600",  bg: "bg-amber-50",    click: undefined },
+            { label: "Revenue collected", value: `₦${stats.revenue.toLocaleString("en-NG")}`, Icon: CreditCard, color: "text-emerald-700", bg: "bg-emerald-50", click: () => setView("payments") },
+          ].map(({ label, value, Icon, color, bg, click }) => (
+            <button type="button" key={label} onClick={click} className={`${bg} rounded-2xl border border-border p-5 flex flex-col gap-3 text-left ${click ? "hover:shadow-soft transition-shadow cursor-pointer" : "cursor-default"}`}>
               <div className="w-9 h-9 rounded-xl bg-white/60 flex items-center justify-center">
                 <Icon size={18} className={color} />
               </div>
@@ -667,7 +669,7 @@ export function BookingsDashboard() {
                 <p className={`text-3xl font-bold ${color}`}>{value}</p>
                 <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -730,7 +732,7 @@ export function BookingsDashboard() {
     );
   }
 
-  // ── Bookings ──────────────────────────────────────────────────────────────────
+  // ── Sessions (booking form submissions with date+time) ────────────────────────
 
   function BookingsContent() {
     return (
@@ -738,12 +740,10 @@ export function BookingsDashboard() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search by name, phone, program…" className="pl-9 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input placeholder="Search by name, phone, or session…" className="pl-9 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-44 bg-card">
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
+            <SelectTrigger className="w-full sm:w-40 bg-card"><SelectValue placeholder="All statuses" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All statuses</SelectItem>
               {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -755,57 +755,224 @@ export function BookingsDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="text-left px-6 py-3.5 font-medium text-muted-foreground">Person</th>
-                  <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden md:table-cell">Program</th>
-                  <th className="text-left px-4 py-3.5 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden xl:table-cell">Payment</th>
-                  <th className="text-left px-4 py-3.5 font-medium text-muted-foreground hidden lg:table-cell">Date</th>
-                  <th className="px-4 py-3.5" scope="col"><span className="sr-only">Actions</span></th>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Client</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">Session</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Date & Time</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Payment</th>
+                  <th className="px-4 py-3" scope="col"><span className="sr-only">Details</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-16 text-center text-muted-foreground">
-                      {bookings.length === 0 ? "No bookings yet." : "No results match your filter."}
+                  <tr><td colSpan={6} className="py-16 text-center text-sm text-muted-foreground">
+                    {sessionBookings.length === 0 ? "No session bookings yet." : "No results match your search."}
+                  </td></tr>
+                ) : filtered.map((b) => (
+                  <tr key={b.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${selected?.id === b.id ? "bg-primary/5" : ""}`} onClick={() => { setSelected(b); setEditingNotes(false); }}>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={b.name} />
+                        <div>
+                          <p className="font-medium text-foreground text-sm">{b.name}</p>
+                          <a href={`tel:${b.phone}`} className="text-xs text-muted-foreground hover:text-primary" onClick={(e) => e.stopPropagation()}>{b.phone}</a>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 hidden md:table-cell">
+                      <p className="text-sm text-foreground/80 truncate max-w-[180px]">{b.program}</p>
+                      {b.hours && <p className="text-xs text-muted-foreground">{b.hours}h{b.amountDue ? ` · ₦${b.amountDue.toLocaleString("en-NG")}` : ""}</p>}
+                    </td>
+                    <td className="px-4 py-3.5 hidden lg:table-cell">
+                      <p className="text-sm text-foreground">{b.sessionDate}</p>
+                      <p className="text-xs text-muted-foreground">{b.sessionTime ?? "—"}</p>
+                    </td>
+                    <td className="px-4 py-3.5"><StatusBadge status={b.status} /></td>
+                    <td className="px-4 py-3.5 hidden xl:table-cell">
+                      <PaymentBadge status={b.paymentStatus} />
+                      {b.paymentStatus === "paid" && b.amountPaid != null && (
+                        <span className="block text-xs text-muted-foreground mt-0.5">{formatNaira(b.amountPaid)}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <ChevronRight size={14} className={`inline text-muted-foreground transition-transform ${selected?.id === b.id ? "rotate-90 text-primary" : ""}`} />
                     </td>
                   </tr>
-                ) : (
-                  filtered.map((b) => (
-                    <tr key={b.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${selected?.id === b.id ? "bg-primary/5" : ""}`} onClick={() => { setSelected(b); setEditingNotes(false); }}>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={b.name} />
-                          <div>
-                            <p className="font-medium text-foreground">{b.name}</p>
-                            <a href={`tel:${b.phone}`} className="text-xs text-muted-foreground hover:text-primary" onClick={(e) => e.stopPropagation()}>{b.phone}</a>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 hidden md:table-cell">
-                        <span className="text-foreground/80 truncate max-w-[200px] block">{b.program}</span>
-                      </td>
-                      <td className="px-4 py-3.5"><StatusBadge status={b.status} /></td>
-                      <td className="px-4 py-3.5 hidden xl:table-cell">
-                        <PaymentBadge status={b.paymentStatus} />
-                        {b.paymentStatus === "paid" && b.amountPaid != null && (
-                          <span className="block text-xs text-muted-foreground mt-1">{formatNaira(b.amountPaid)}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-muted-foreground hidden lg:table-cell">{fmt(b.enrollmentDate)}</td>
-                      <td className="px-4 py-3.5 text-right">
-                        <ChevronRight size={14} className={`inline text-muted-foreground transition-transform ${selected?.id === b.id ? "rotate-90 text-primary" : ""}`} />
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
           {filtered.length > 0 && (
-            <div className="px-6 py-3 border-t border-border text-xs text-muted-foreground">
-              {filtered.length} of {bookings.length} booking{bookings.length !== 1 ? "s" : ""}
+            <div className="px-5 py-3 border-t border-border text-xs text-muted-foreground">
+              Showing {filtered.length} of {sessionBookings.length} session{sessionBookings.length !== 1 ? "s" : ""}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Program Enrollments ────────────────────────────────────────────────────────
+
+  function EnrollmentsContent() {
+    const filteredEnrollments = enrollmentBookings.filter((b) => {
+      const matchStatus = filterStatus === "All" || b.status === filterStatus;
+      const q = search.toLowerCase();
+      return (filterStatus === "All" || matchStatus) && (!search || b.name.toLowerCase().includes(q) || b.phone.includes(q) || b.program.toLowerCase().includes(q));
+    });
+
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search by name, phone, or program…" className="pl-9 bg-card" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-full sm:w-40 bg-card"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All statuses</SelectItem>
+              {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Client</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">Program</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Payment</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Enrolled</th>
+                  <th className="px-4 py-3" scope="col"><span className="sr-only">Details</span></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredEnrollments.length === 0 ? (
+                  <tr><td colSpan={6} className="py-16 text-center text-sm text-muted-foreground">
+                    {enrollmentBookings.length === 0 ? "No enrollments yet." : "No results match your search."}
+                  </td></tr>
+                ) : filteredEnrollments.map((b) => (
+                  <tr key={b.id} className={`hover:bg-muted/30 cursor-pointer transition-colors ${selected?.id === b.id ? "bg-primary/5" : ""}`} onClick={() => { setSelected(b); setEditingNotes(false); }}>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={b.name} />
+                        <div>
+                          <p className="font-medium text-foreground text-sm">{b.name}</p>
+                          <a href={`tel:${b.phone}`} className="text-xs text-muted-foreground hover:text-primary" onClick={(e) => e.stopPropagation()}>{b.phone}</a>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 hidden md:table-cell">
+                      <span className="text-sm text-foreground/80 truncate max-w-[200px] block">{b.program}</span>
+                    </td>
+                    <td className="px-4 py-3.5"><StatusBadge status={b.status} /></td>
+                    <td className="px-4 py-3.5 hidden xl:table-cell">
+                      <PaymentBadge status={b.paymentStatus} />
+                      {b.paymentStatus === "paid" && b.amountPaid != null && (
+                        <span className="block text-xs text-muted-foreground mt-0.5">{formatNaira(b.amountPaid)}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground hidden lg:table-cell">{fmt(b.enrollmentDate)}</td>
+                    <td className="px-4 py-3.5 text-right">
+                      <ChevronRight size={14} className={`inline text-muted-foreground transition-transform ${selected?.id === b.id ? "rotate-90 text-primary" : ""}`} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {filteredEnrollments.length > 0 && (
+            <div className="px-5 py-3 border-t border-border text-xs text-muted-foreground">
+              Showing {filteredEnrollments.length} of {enrollmentBookings.length} enrollment{enrollmentBookings.length !== 1 ? "s" : ""}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Payments ──────────────────────────────────────────────────────────────────
+
+  function PaymentsContent() {
+    const paid    = paymentBookings.filter(b => b.paymentStatus === "paid");
+    const pending = paymentBookings.filter(b => b.paymentStatus === "pending");
+    const failed  = paymentBookings.filter(b => b.paymentStatus === "failed");
+    const totalRevenue = paid.reduce((s, b) => s + (b.amountPaid ?? b.amountDue ?? 0), 0);
+
+    return (
+      <div className="space-y-5">
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: "Total collected",  value: `₦${totalRevenue.toLocaleString("en-NG")}`, color: "text-emerald-700", bg: "bg-emerald-50",  Icon: CreditCard },
+            { label: "Paid",             value: paid.length,    color: "text-emerald-700", bg: "bg-emerald-50",  Icon: CheckCircle2 },
+            { label: "Awaiting payment", value: pending.length, color: "text-amber-700",   bg: "bg-amber-50",    Icon: Timer },
+            { label: "Failed / lapsed",  value: failed.length,  color: "text-red-600",     bg: "bg-red-50",      Icon: XCircle },
+          ].map(({ label, value, color, bg, Icon }) => (
+            <div key={label} className={`${bg} border border-border rounded-2xl p-5`}>
+              <Icon size={16} className={`${color} mb-3`} />
+              <p className={`text-2xl font-bold ${color}`}>{value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Transactions table */}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <h3 className="font-sans font-semibold text-sm text-foreground">All Transactions</h3>
+            <span className="text-xs text-muted-foreground">{paymentBookings.length} total</span>
+          </div>
+          {paymentBookings.length === 0 ? (
+            <div className="py-16 text-center text-sm text-muted-foreground">No payment transactions yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Client</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">For</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Amount</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Reference</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[...paymentBookings].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((b) => (
+                    <tr key={b.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={b.name} />
+                          <div>
+                            <p className="font-medium text-foreground text-sm">{b.name}</p>
+                            <p className="text-xs text-muted-foreground">{b.email ?? b.phone}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 hidden md:table-cell">
+                        <p className="text-sm text-foreground/80 truncate max-w-[160px]">{b.program}</p>
+                        {b.sessionDate && <p className="text-xs text-muted-foreground">{b.sessionDate} · {b.sessionTime}</p>}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="font-semibold text-foreground">
+                          {b.amountPaid != null ? formatNaira(b.amountPaid) : b.amountDue != null ? formatNaira(b.amountDue) : "—"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3.5"><PaymentBadge status={b.paymentStatus} /></td>
+                      <td className="px-4 py-3.5 hidden lg:table-cell">
+                        <code className="text-xs text-muted-foreground font-mono">{b.paymentReference ? b.paymentReference.slice(-12) : "—"}</code>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-muted-foreground hidden xl:table-cell">{fmt(b.paidAt ?? b.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -934,47 +1101,6 @@ export function BookingsDashboard() {
     );
   }
 
-  // ── Schedule ──────────────────────────────────────────────────────────────────
-
-  function ScheduleContent() {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">Set available intake dates per program. These help track when enrollments open.</p>
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {PROGRAMS.map((prog) => {
-            const dates = programDates[prog] ?? [];
-            return (
-              <div key={prog} className="bg-card border border-border rounded-2xl p-5 space-y-3">
-                <h3 className="font-sans font-medium text-sm text-foreground leading-snug">{prog}</h3>
-                {dates.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No dates set.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {dates.map((d) => (
-                      <span key={d} className="inline-flex items-center gap-1 bg-primary/8 text-primary text-xs px-2.5 py-1 rounded-lg">
-                        <Calendar size={10} />
-                        {fmt(d)}
-                        <button type="button" title={`Remove ${fmt(d)}`} onClick={() => removeProgramDate(prog, d)} className="ml-0.5 text-primary/60 hover:text-red-500 transition-colors">
-                          <X size={10} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Input type="date" className="h-8 text-xs" value={dateInputs[prog] ?? ""} onChange={(e) => setDateInputs((prev) => ({ ...prev, [prog]: e.target.value }))} min={new Date().toISOString().split("T")[0]} />
-                  <Button size="sm" variant="outline" className="h-8 px-3 flex-shrink-0 text-primary border-primary/30 hover:bg-primary/5" onClick={() => addProgramDate(prog)}>
-                    <Plus size={13} />
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
   // ── Programs CMS ─────────────────────────────────────────────────────────────
 
   function ProgramsContent() {
@@ -1077,8 +1203,29 @@ export function BookingsDashboard() {
   // ── Team & Access ────────────────────────────────────────────────────────────
 
   function TeamContent() {
+    const ROLE_META: Record<Role, { color: string; bg: string; border: string; desc: string; Icon: typeof ShieldCheck }> = {
+      admin:    { color: "text-primary",     bg: "bg-primary/8",    border: "border-primary/20",   desc: "Full access to all pages, settings, and team management.", Icon: ShieldCheck },
+      finance:  { color: "text-emerald-700", bg: "bg-emerald-50",   border: "border-emerald-200",  desc: "View payments, revenue, and financial transactions.",        Icon: CreditCard },
+      bookings: { color: "text-amber-700",   bg: "bg-amber-50",     border: "border-amber-200",    desc: "Manage session bookings, enrollments, and availability.",   Icon: Calendar },
+      programs: { color: "text-violet-700",  bg: "bg-violet-50",    border: "border-violet-200",   desc: "Create and edit programs in the programs CMS.",             Icon: BookOpen },
+    };
+
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Role legend */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          {(Object.entries(ROLE_META) as [Role, typeof ROLE_META[Role]][]).map(([role, meta]) => (
+            <div key={role} className={`rounded-2xl border ${meta.border} ${meta.bg} p-4`}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <meta.Icon size={14} className={meta.color} />
+                <span className={`text-xs font-semibold ${meta.color}`}>{ROLE_LABELS[role]}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{meta.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Members */}
         {users.length === 0 ? (
           <div className="bg-card border border-dashed border-border rounded-2xl p-16 text-center">
             <div className="w-14 h-14 rounded-2xl bg-primary/8 text-primary flex items-center justify-center mx-auto mb-4">
@@ -1091,31 +1238,235 @@ export function BookingsDashboard() {
             </Button>
           </div>
         ) : (
-          <div className="bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
-            {users.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-5 py-4">
-                <Avatar name={u.name} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-foreground text-sm truncate">{u.name}</p>
-                    {u.id === user?.id && <span className="text-[10px] uppercase tracking-wide text-muted-foreground flex-shrink-0">(You)</span>}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">{users.length} member{users.length !== 1 ? "s" : ""}</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {users.map((u) => {
+                const meta = ROLE_META[u.role];
+                const isMe = u.id === user?.id;
+                return (
+                  <div key={u.id} className="flex items-center gap-4 px-5 py-4">
+                    {/* Avatar with ring */}
+                    <div className="relative flex-shrink-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${meta.bg} ${meta.color} ring-2 ${isMe ? "ring-primary/30" : "ring-transparent"}`}>
+                        {u.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                      </div>
+                      {isMe && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-card" title="This is you" />
+                      )}
+                    </div>
+
+                    {/* Name + email */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-foreground text-sm truncate">{u.name}</p>
+                        {isMe && <span className="text-[10px] uppercase tracking-widest text-muted-foreground flex-shrink-0 font-medium">You</span>}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                    </div>
+
+                    {/* Role badge */}
+                    <div className={`hidden sm:flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border flex-shrink-0 ${meta.bg} ${meta.color} ${meta.border}`}>
+                      <meta.Icon size={11} />
+                      {ROLE_LABELS[u.role]}
+                    </div>
+
+                    {/* Added date */}
+                    <span className="text-xs text-muted-foreground flex-shrink-0 hidden lg:block">{fmt(u.createdAt)}</span>
+
+                    {/* Actions */}
+                    {!isMe ? (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          title="Reset password"
+                          onClick={() => { setResetPasswordUser(u); setResetPasswordValue(""); setResetPasswordError(""); setResetPasswordShow(false); }}
+                          className="h-8 w-8 rounded-lg border border-border text-muted-foreground hover:bg-primary/8 hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center"
+                        >
+                          <KeyRound size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          title="Remove access"
+                          onClick={() => removeUser(u)}
+                          className="h-8 w-8 rounded-lg border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-[68px] flex-shrink-0" />
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Session Types ─────────────────────────────────────────────────────────────
+
+  const openAddSessionType = () => {
+    setSessionTypeEditId(null);
+    setSessionTypeForm(emptySessionTypeForm());
+    setIsSessionTypeOpen(true);
+  };
+
+  const openEditSessionType = (s: SessionTypeData) => {
+    setSessionTypeEditId(s.id);
+    setSessionTypeForm({
+      name: s.name,
+      description: s.description,
+      pricePerHour: s.pricePerHour,
+      minHours: s.minHours,
+      maxHours: s.maxHours,
+      isActive: s.isActive,
+      order: s.order,
+    });
+    setIsSessionTypeOpen(true);
+  };
+
+  const saveSessionType = async () => {
+    setSessionTypeSaving(true);
+    try {
+      if (sessionTypeEditId) {
+        const updated = await api.patch<SessionTypeData>(`/api/session-types/${sessionTypeEditId}`, sessionTypeForm);
+        setSessionTypes((prev) => prev.map((s) => (s.id === sessionTypeEditId ? updated : s)));
+      } else {
+        const created = await api.post<SessionTypeData>("/api/session-types", sessionTypeForm);
+        setSessionTypes((prev) => [...prev, created].sort((a, b) => a.order - b.order));
+      }
+      setIsSessionTypeOpen(false);
+    } catch {
+      alert("Failed to save session type.");
+    } finally {
+      setSessionTypeSaving(false);
+    }
+  };
+
+  const deleteSessionType = async (id: string) => {
+    if (!window.confirm("Delete this session type? This cannot be undone.")) return;
+    try {
+      await api.del(`/api/session-types/${id}`);
+      setSessionTypes((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      alert("Failed to delete session type.");
+    }
+  };
+
+  const toggleSessionTypeActive = async (s: SessionTypeData) => {
+    const updated = await api.patch<SessionTypeData>(`/api/session-types/${s.id}`, { isActive: !s.isActive });
+    setSessionTypes((prev) => prev.map((t) => (t.id === s.id ? updated : t)));
+  };
+
+  function SessionTypesContent() {
+    const sorted = [...sessionTypes].sort((a, b) => a.order - b.order);
+    const active = sorted.filter((s) => s.isActive).length;
+
+    return (
+      <div className="space-y-5">
+        {/* Stats row */}
+        {sorted.length > 0 && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-2xl font-bold text-foreground">{sorted.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Total types</p>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+              <p className="text-2xl font-bold text-emerald-700">{active}</p>
+              <p className="text-xs text-emerald-600 mt-0.5">Active</p>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-2xl font-bold text-foreground">{sorted.length - active}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Inactive</p>
+            </div>
+          </div>
+        )}
+
+        {/* Cards grid */}
+        {sorted.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl p-14 text-center">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <Layers size={24} className="text-muted-foreground/50" />
+            </div>
+            <p className="font-medium text-foreground mb-1">No session types yet</p>
+            <p className="text-sm text-muted-foreground mb-5">Add your first session type to start accepting bookings.</p>
+            <button type="button" onClick={openAddSessionType} className="inline-flex items-center gap-2 text-sm font-medium bg-primary text-primary-foreground px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity">
+              <Plus size={14} /> Add Session Type
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {sorted.map((s) => (
+              <div
+                key={s.id}
+                className={`relative bg-card border rounded-2xl p-5 flex flex-col gap-4 transition-shadow hover:shadow-md ${s.isActive ? "border-border" : "border-dashed border-border opacity-60"}`}
+              >
+                {/* Status pill */}
+                <div className={`absolute top-4 right-4 flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full ${s.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${s.isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
+                  {s.isActive ? "Active" : "Inactive"}
                 </div>
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-primary/8 text-primary flex-shrink-0">
-                  {ROLE_LABELS[u.role]}
-                </span>
-                <span className="text-xs text-muted-foreground flex-shrink-0 hidden sm:block">{fmt(u.createdAt)}</span>
-                {u.id !== user?.id && (
-                  <>
-                    <button type="button" title="Reset password" onClick={() => { setResetPasswordUser(u); setResetPasswordValue(""); setResetPasswordError(""); setResetPasswordShow(false); }} className="h-8 w-8 flex-shrink-0 rounded-md border border-border text-muted-foreground hover:bg-primary/8 hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center">
-                      <KeyRound size={13} />
-                    </button>
-                    <button type="button" title="Remove access" onClick={() => removeUser(u)} className="h-8 w-8 flex-shrink-0 rounded-md border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center">
-                      <Trash2 size={13} />
-                    </button>
-                  </>
-                )}
+
+                {/* Icon + name */}
+                <div className="flex items-start gap-3 pr-20">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                    <Layers size={18} />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold mb-2 text-primary">{s.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.description || "No description"}</p>
+                  </div>
+                </div>
+
+                {/* Pricing + duration chips */}
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-primary/8 text-primary">
+                    <DollarSign size={11} />
+                    {s.pricePerHour > 0 ? `₦${s.pricePerHour.toLocaleString("en-NG")}/hr` : "Free"}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
+                    <Clock size={11} />
+                    {s.minHours === s.maxHours ? `${s.minHours}h` : `${s.minHours}–${s.maxHours}h`}
+                  </span>
+                  {s.pricePerHour > 0 && s.maxHours > 1 && (
+                    <span className="inline-flex items-center text-xs text-muted-foreground px-3 py-1.5 rounded-full bg-muted">
+                      up to ₦{(s.pricePerHour * s.maxHours).toLocaleString("en-NG")}
+                    </span>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 mt-auto pt-3 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => toggleSessionTypeActive(s)}
+                    className={`flex-1 text-xs font-medium py-2 rounded-lg border transition-colors ${s.isActive ? "border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100" : "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"}`}
+                  >
+                    {s.isActive ? "Deactivate" : "Activate"}
+                  </button>
+                  <button
+                    type="button"
+                    title="Edit"
+                    onClick={() => openEditSessionType(s)}
+                    className="h-8 w-8 rounded-lg border border-border text-muted-foreground hover:bg-primary/8 hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center"
+                  >
+                    <Edit3 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Delete"
+                    onClick={() => deleteSessionType(s.id)}
+                    className="h-8 w-8 rounded-lg border border-border text-muted-foreground hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1161,7 +1512,7 @@ export function BookingsDashboard() {
                 {STATUSES.map((s) => {
                   const c = STATUS_CFG[s];
                   return (
-                    <button key={s} onClick={() => updateStatus(b.id, s)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${b.status === s ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-1 ring-current/30` : "bg-muted/40 text-muted-foreground border-border hover:border-primary/30"}`}>
+                    <button type="button" key={s} onClick={() => updateStatus(b.id, s)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${b.status === s ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-1 ring-current/30` : "bg-muted/40 text-muted-foreground border-border hover:border-primary/30"}`}>
                       <c.Icon size={11} />{s}
                     </button>
                   );
@@ -1215,7 +1566,7 @@ export function BookingsDashboard() {
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Notes</p>
               {canManageBookings && !editingNotes && (
-                <button onClick={() => { setTempNotes(b.notes ?? ""); setEditingNotes(true); }} className="text-xs text-primary flex items-center gap-1 hover:underline">
+                <button type="button" onClick={() => { setTempNotes(b.notes ?? ""); setEditingNotes(true); }} className="text-xs text-primary flex items-center gap-1 hover:underline">
                   <Edit3 size={10} /> Edit
                 </button>
               )}
@@ -1247,12 +1598,7 @@ export function BookingsDashboard() {
 
   // ── Header title / action helpers ─────────────────────────────────────────────
 
-  const headerTitle = view === "overview" ? "Overview"
-    : view === "bookings" ? "Bookings & Enrollments"
-    : view === "availability" ? "Availability"
-    : view === "schedule" ? "Program Intake Schedule"
-    : view === "team" ? "Team & Access"
-    : "Programs CMS";
+  const headerTitle = visibleNav.find(n => n.id === view)?.label ?? "Dashboard";
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -1279,7 +1625,7 @@ export function BookingsDashboard() {
 
         <nav className="flex-1 p-3 space-y-0.5">
           {visibleNav.map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${view === id ? "bg-white/15 text-white" : "text-white/55 hover:text-white hover:bg-white/8"}`}>
+            <button type="button" key={id} onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${view === id ? "bg-white/15 text-white" : "text-white/55 hover:text-white hover:bg-white/8"}`}>
               <Icon size={16} />
               {label}
               {id === "bookings" && stats.pending > 0 && (
@@ -1340,34 +1686,47 @@ export function BookingsDashboard() {
         <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* Top bar */}
-          <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-            <div className="flex items-center gap-3">
-              <button type="button" title="Toggle menu" className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b bg-card border-border gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <button type="button" title="Toggle menu" className="lg:hidden text-muted-foreground hover:text-foreground flex-shrink-0" onClick={() => setSidebarOpen(!sidebarOpen)}>
                 <Menu size={20} />
               </button>
-              <div>
-                <h1 className="text-base font-semibold text-foreground">{headerTitle}</h1>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {(() => { const n = visibleNav.find(x => x.id === view); return n ? <n.Icon size={15} className="text-muted-foreground flex-shrink-0" /> : null; })()}
+                  <h1 className="text-sm font-semibold text-foreground truncate">{headerTitle}</h1>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {view === "programs"
-                    ? `${programs.length} program${programs.length !== 1 ? "s" : ""} · ${programs.filter(p => p.status === "active").length} live`
+                    ? `${programs.length} program${programs.length !== 1 ? "s" : ""} · ${programs.filter(p => p.status === "active").length} active`
                     : view === "team"
-                    ? `${users.length} team member${users.length !== 1 ? "s" : ""}`
-                    : (view === "overview" || view === "bookings") && canViewBookings
-                    ? `${stats.total} total · ${stats.pending} pending`
-                    : ""}
+                    ? `${users.length} member${users.length !== 1 ? "s" : ""}`
+                    : view === "sessions"
+                    ? `${sessionTypes.length} type${sessionTypes.length !== 1 ? "s" : ""} · ${sessionTypes.filter(s => s.isActive).length} active`
+                    : view === "bookings"
+                    ? `${sessionBookings.length} session${sessionBookings.length !== 1 ? "s" : ""} · ${stats.pending} pending`
+                    : view === "enrollments"
+                    ? `${enrollmentBookings.length} enrollment${enrollmentBookings.length !== 1 ? "s" : ""} · ${enrollmentBookings.filter(b => b.status === "Pending").length} pending`
+                    : view === "payments"
+                    ? `${paymentBookings.length} transaction${paymentBookings.length !== 1 ? "s" : ""} · ₦${stats.revenue.toLocaleString("en-NG")} collected`
+                    : visibleNav.find(n => n.id === view)?.sub ?? ""}
                 </p>
               </div>
             </div>
             {view === "programs" && canManagePrograms ? (
-              <Button onClick={openAddProgram} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus size={14} className="mr-1.5" /> Add Program
+              <Button onClick={openAddProgram} size="sm" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={14} className="mr-1.5" /> New Program
               </Button>
             ) : view === "team" && isAdmin ? (
-              <Button onClick={() => { setUserForm(emptyUserForm()); setIsUserOpen(true); }} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus size={14} className="mr-1.5" /> Add Team Member
+              <Button onClick={() => { setUserForm(emptyUserForm()); setIsUserOpen(true); }} size="sm" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={14} className="mr-1.5" /> Add Member
+              </Button>
+            ) : view === "sessions" ? (
+              <Button onClick={openAddSessionType} size="sm" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus size={14} className="mr-1.5" /> New Type
               </Button>
             ) : (view === "overview" || view === "bookings") && canManageBookings ? (
-              <Button onClick={() => setIsAddOpen(true)} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button onClick={() => setIsAddOpen(true)} size="sm" className="flex-shrink-0 bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus size={14} className="mr-1.5" /> New Booking
               </Button>
             ) : null}
@@ -1375,16 +1734,18 @@ export function BookingsDashboard() {
 
           {/* Page content */}
           <main className="flex-1 overflow-auto p-6">
-            {view === "overview"    && <OverviewContent />}
-            {view === "bookings"    && <BookingsContent />}
+            {view === "overview"     && <OverviewContent />}
+            {view === "bookings"     && <BookingsContent />}
+            {view === "enrollments"  && <EnrollmentsContent />}
+            {view === "payments"     && <PaymentsContent />}
             {view === "availability" && <AvailabilityContent />}
-            {view === "schedule"    && <ScheduleContent />}
-            {view === "programs"    && <ProgramsContent />}
-            {view === "team"        && <TeamContent />}
+            {view === "programs"     && <ProgramsContent />}
+            {view === "team"         && <TeamContent />}
+            {view === "sessions"     && <SessionTypesContent />}
           </main>
         </div>
 
-        {selected && view === "bookings" && <DetailPanel />}
+        {selected && (view === "bookings" || view === "enrollments") && <DetailPanel />}
       </div>
 
       {/* Add Booking Modal */}
@@ -1550,7 +1911,7 @@ export function BookingsDashboard() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="p-status">Status</Label>
-                <Select value={programForm.status} onValueChange={(v: "active" | "draft") => setProgramForm((f) => ({ ...f, status: v }))}>
+                <Select value={programForm.status} onValueChange={(v: string) => setProgramForm((f) => ({ ...f, status: v as "active" }))}>
                   <SelectTrigger id="p-status" className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Live (visible on website)</SelectItem>
@@ -1562,8 +1923,7 @@ export function BookingsDashboard() {
                 <label className="flex items-center gap-3 cursor-pointer mt-6">
                   <button
                     type="button"
-                    role="switch"
-                    aria-checked={programForm.enrollmentOpen ? "true" : "false"}
+                    aria-label={programForm.enrollmentOpen ? "Close enrollment" : "Open enrollment"}
                     onClick={() => setProgramForm((f) => ({ ...f, enrollmentOpen: !f.enrollmentOpen }))}
                     className={`relative w-11 h-6 rounded-full transition-colors ${programForm.enrollmentOpen ? "bg-primary" : "bg-muted-foreground/30"}`}
                   >
@@ -1692,6 +2052,106 @@ export function BookingsDashboard() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add / Edit Session Type Modal */}
+      <Dialog open={isSessionTypeOpen} onOpenChange={(open) => { if (!open) { setIsSessionTypeOpen(false); setSessionTypeEditId(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl" style={{ color: "var(--primary)" }}>
+              {sessionTypeEditId ? "Edit Session Type" : "New Session Type"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div>
+              <Label htmlFor="st-name">Name *</Label>
+              <Input id="st-name" placeholder="e.g. Life Coaching" value={sessionTypeForm.name} onChange={(e) => setSessionTypeForm({ ...sessionTypeForm, name: e.target.value })} className="mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="st-desc">Description</Label>
+              <textarea
+                id="st-desc"
+                rows={3}
+                placeholder="Brief description shown to clients…"
+                value={sessionTypeForm.description}
+                onChange={(e) => setSessionTypeForm({ ...sessionTypeForm, description: e.target.value })}
+                className="mt-1 w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="st-price">Price per hour (₦)</Label>
+                <Input
+                  id="st-price"
+                  type="number"
+                  min={0}
+                  step={500}
+                  placeholder="0 = Free"
+                  value={sessionTypeForm.pricePerHour || ""}
+                  onChange={(e) => setSessionTypeForm({ ...sessionTypeForm, pricePerHour: Number(e.target.value) })}
+                  className="mt-1"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">Leave 0 for free sessions</p>
+              </div>
+              <div>
+                <Label htmlFor="st-order">Display order</Label>
+                <Input
+                  id="st-order"
+                  type="number"
+                  min={0}
+                  value={sessionTypeForm.order}
+                  onChange={(e) => setSessionTypeForm({ ...sessionTypeForm, order: Number(e.target.value) })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="st-min">Min hours</Label>
+                <Input
+                  id="st-min"
+                  type="number"
+                  min={1}
+                  value={sessionTypeForm.minHours}
+                  onChange={(e) => setSessionTypeForm({ ...sessionTypeForm, minHours: Number(e.target.value) })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="st-max">Max hours</Label>
+                <Input
+                  id="st-max"
+                  type="number"
+                  min={1}
+                  value={sessionTypeForm.maxHours}
+                  onChange={(e) => setSessionTypeForm({ ...sessionTypeForm, maxHours: Number(e.target.value) })}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                type="button"
+                aria-label={sessionTypeForm.isActive ? "Deactivate session type" : "Activate session type"}
+                onClick={() => setSessionTypeForm({ ...sessionTypeForm, isActive: !sessionTypeForm.isActive })}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${sessionTypeForm.isActive ? "bg-primary" : "bg-border"}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${sessionTypeForm.isActive ? "translate-x-4" : "translate-x-0.5"}`} />
+              </button>
+              <span className="text-sm text-foreground">{sessionTypeForm.isActive ? "Active — visible to clients" : "Inactive — hidden from booking page"}</span>
+            </div>
+          </div>
+          <DialogFooter className="pt-4">
+            <Button variant="outline" onClick={() => setIsSessionTypeOpen(false)}>Cancel</Button>
+            <Button
+              onClick={saveSessionType}
+              disabled={!sessionTypeForm.name.trim() || sessionTypeSaving}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {sessionTypeSaving ? "Saving…" : sessionTypeEditId ? "Save Changes" : "Create"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

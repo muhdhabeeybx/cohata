@@ -44,6 +44,8 @@ const bookingSchema = new mongoose.Schema({
   sessionDate:      String,
   sessionTime:      String,
   notes:            String,
+  hours:            Number,   // selected hours (for per-hour session types)
+  amountDue:        Number,   // pricePerHour × hours, in Naira; 0 = free
   paymentStatus:    String,   // "pending" | "paid" | "failed"
   paymentReference: String,
   amountPaid:       Number,   // in Naira
@@ -84,6 +86,24 @@ programSchema.set("toJSON", {
 });
 
 const ProgramModel = mongoose.model("Program", programSchema);
+
+// Session Types (admin-managed, shown on booking page)
+const sessionTypeSchema = new mongoose.Schema({
+  name:          { type: String, required: true },
+  description:   { type: String, default: "" },
+  pricePerHour:  { type: Number, default: 0 },    // ₦ per hour; 0 = free
+  minHours:      { type: Number, default: 1 },
+  maxHours:      { type: Number, default: 4 },
+  isActive:      { type: Boolean, default: true },
+  order:         { type: Number, default: 0 },
+  createdAt:     { type: String, default: () => new Date().toISOString() },
+}, { versionKey: false });
+
+sessionTypeSchema.set("toJSON", {
+  transform: (_doc, ret) => { ret.id = ret._id.toString(); delete ret._id; return ret; },
+});
+
+const SessionType = mongoose.model("SessionType", sessionTypeSchema);
 
 // ─── Users / roles ────────────────────────────────────────────────────────────
 
@@ -276,7 +296,7 @@ app.delete("/api/users/:id", authenticate, requireRole("admin"), async (req, res
 // Public — used by the booking page to grey out already-taken slots, without exposing client details.
 app.get("/api/booked-slots", async (_req, res) => {
   try {
-    const bookings = await Booking.find({}, "sessionDate sessionTime status");
+    const bookings = await Booking.find({}, "sessionDate sessionTime status hours");
     res.json(bookings);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -364,6 +384,60 @@ app.post("/api/payments/initialize", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Public — starts a paid session booking via Paystack.
+app.post("/api/payments/initialize-session", async (req, res) => {
+  try {
+    if (!PAYSTACK_SECRET_KEY) return res.status(503).json({ error: "Online payments are not configured yet" });
+    const { sessionTypeId, name, email, phone, notes, sessionDate, sessionTime, hours } = req.body;
+    if (!sessionTypeId || !name || !email || !phone || !sessionDate || !sessionTime || !hours) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const sessionType = await SessionType.findById(sessionTypeId);
+    if (!sessionType) return res.status(404).json({ error: "Session type not found" });
+    if (!sessionType.isActive) return res.status(400).json({ error: "This session type is not currently available" });
+    const amountDue = sessionType.pricePerHour * Number(hours);
+    if (amountDue <= 0) return res.status(400).json({ error: "This session type is free — book directly" });
+
+    const reference = `cohata_sess_${Date.now()}_${crypto.randomBytes(6).toString("hex")}`;
+    const booking = await Booking.create({
+      name, phone, email, notes: notes || "",
+      program: sessionType.name,
+      sessionDate, sessionTime,
+      hours: Number(hours),
+      amountDue,
+      status: "Pending",
+      enrollmentDate: new Date().toISOString().split("T")[0],
+      paymentStatus: "pending",
+      paymentReference: reference,
+      currency: "NGN",
+    });
+
+    const origin = req.headers.origin || FRONTEND_URL;
+    try {
+      const tx = await paystackRequest("/transaction/initialize", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          amount: Math.round(amountDue * 100),
+          currency: "NGN",
+          reference,
+          callback_url: `${origin}/payment-callback`,
+          metadata: {
+            bookingId: booking._id.toString(),
+            sessionTypeId: sessionType._id.toString(),
+            sessionTypeName: sessionType.name,
+            sessionDate, sessionTime, hours: Number(hours),
+          },
+        }),
+      });
+      res.json({ authorization_url: tx.authorization_url, access_code: tx.access_code, reference });
+    } catch (paystackError) {
+      await Booking.findByIdAndDelete(booking._id);
+      throw paystackError;
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Public — called by the payment-callback page after Paystack redirects the user back.
 app.get("/api/payments/verify/:reference", async (req, res) => {
   try {
@@ -383,6 +457,9 @@ app.get("/api/payments/verify/:reference", async (req, res) => {
       status: tx.status,
       program: booking?.program,
       amount: tx.amount / 100,
+      sessionDate: booking?.sessionDate ?? null,
+      sessionTime: booking?.sessionTime ?? null,
+      hours: booking?.hours ?? null,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -477,6 +554,45 @@ app.patch("/api/programs/:id", authenticate, requireRole("admin", "programs"), a
 app.delete("/api/programs/:id", authenticate, requireRole("admin", "programs"), async (req, res) => {
   try {
     const result = await ProgramModel.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: "Not found" });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Session Types ────────────────────────────────────────────────────────────
+
+app.get("/api/session-types", async (_req, res) => {
+  try {
+    const types = await SessionType.find({ isActive: true }).sort({ order: 1, createdAt: 1 });
+    res.json(types);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/session-types/all", authenticate, requireRole("admin", "bookings"), async (_req, res) => {
+  try {
+    const types = await SessionType.find().sort({ order: 1, createdAt: 1 });
+    res.json(types);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/session-types", authenticate, requireRole("admin", "bookings"), async (req, res) => {
+  try {
+    const st = await SessionType.create(req.body);
+    res.status(201).json(st);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.patch("/api/session-types/:id", authenticate, requireRole("admin", "bookings"), async (req, res) => {
+  try {
+    const st = await SessionType.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!st) return res.status(404).json({ error: "Not found" });
+    res.json(st);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.delete("/api/session-types/:id", authenticate, requireRole("admin", "bookings"), async (req, res) => {
+  try {
+    const result = await SessionType.findByIdAndDelete(req.params.id);
     if (!result) return res.status(404).json({ error: "Not found" });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

@@ -14,7 +14,7 @@ export const Route = createFileRoute("/payment-callback")({
   }),
 });
 
-type VerifyResult = { status: string; program?: string; amount?: number };
+type VerifyResult = { status: string; program?: string; amount?: number; sessionDate?: string; sessionTime?: string; hours?: number };
 
 function formatNaira(amount: number) {
   return `₦${amount.toLocaleString("en-NG")}`;
@@ -58,10 +58,16 @@ function PaymentCallback() {
             </div>
             <h1 className="font-display text-3xl text-primary mb-3">JazākAllāhu khayran!</h1>
             <p className="text-foreground/70 mb-2">
-              Your payment{result?.amount ? ` of ${formatNaira(result.amount)}` : ""} was successful and your enrollment
-              {result?.program ? <> for <strong>{result.program}</strong></> : ""} is confirmed.
+              Your payment{result?.amount ? ` of ${formatNaira(result.amount)}` : ""} was successful
+              {result?.program ? <> — <strong>{result.program}</strong></> : ""} is confirmed.
             </p>
-            <p className="text-foreground/70 mb-8">Our team will reach out shortly with next steps.</p>
+            {result?.sessionDate && (
+              <p className="text-foreground/70 mb-2">
+                Scheduled for <strong>{result.sessionDate}</strong> at <strong>{result.sessionTime}</strong>
+                {result.hours ? ` · ${result.hours} ${result.hours === 1 ? "hour" : "hours"}` : ""}
+              </p>
+            )}
+            <p className="text-foreground/70 mb-8">Our team will reach out shortly In Shā' Allāh.</p>
             <Link to="/" className="bg-primary text-primary-foreground px-8 py-3.5 rounded-full font-medium inline-block hover:opacity-90 transition-opacity">
               Back to Home
             </Link>
@@ -81,9 +87,14 @@ function PaymentCallback() {
                 ? "Your payment could not be confirmed. If you were charged, please contact us and we'll sort it out."
                 : "We couldn't verify your payment right now. Please contact us if you were charged."}
             </p>
-            <Link to="/programs" className="bg-primary text-primary-foreground px-8 py-3.5 rounded-full font-medium inline-block hover:opacity-90 transition-opacity">
-              Back to Programs
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/book" className="bg-primary text-primary-foreground px-8 py-3.5 rounded-full font-medium inline-block hover:opacity-90 transition-opacity">
+                Try Booking Again
+              </Link>
+              <Link to="/programs" className="border border-border text-foreground px-8 py-3.5 rounded-full font-medium inline-block hover:bg-muted transition-colors">
+                Browse Programs
+              </Link>
+            </div>
           </>
         )}
       </section>
