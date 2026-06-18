@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { Resend } from "resend";
 
 // ─── DB connection ────────────────────────────────────────────────────────────
 
@@ -26,6 +27,29 @@ if (!PAYSTACK_SECRET_KEY) {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://cohatacademy.com";
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const EMAIL_FROM = process.env.EMAIL_FROM || "COHATA <hello@cohatacademy.com>";
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+if (!resend) {
+  console.warn("RESEND_API_KEY env var is not set — booking confirmation emails will be disabled.");
+}
+
+const TERMII_API_KEY = process.env.TERMII_API_KEY;
+const TERMII_SENDER_ID = process.env.TERMII_SENDER_ID || "COHATA";
+if (!TERMII_API_KEY) {
+  console.warn("TERMII_API_KEY env var is not set — booking confirmation SMS will be disabled.");
+}
+
+// Normalizes Nigerian numbers (+234..., 0..., 234..., with spaces/dashes) to Termii's
+// expected "234XXXXXXXXXX" format.
+function normalizeNigerianPhone(phone) {
+  const digits = (phone || "").replace(/\D/g, "");
+  if (digits.startsWith("234")) return digits;
+  if (digits.startsWith("0")) return `234${digits.slice(1)}`;
+  if (digits.length === 10) return `234${digits}`;
+  return digits;
+}
 
 mongoose.set("bufferCommands", false);
 mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 15000 })
@@ -192,7 +216,132 @@ async function markBookingPaid(tx) {
   booking.paidAt = new Date().toISOString();
   if (booking.status === "Pending") booking.status = "Approved";
   await booking.save();
+  await notifyNewBooking(booking);
   return booking;
+}
+
+// ─── Email ────────────────────────────────────────────────────────────────────
+// Edit the HTML/copy below to change what either email says.
+
+function bookingDetailsHtml(booking) {
+  const isSession = !!(booking.sessionDate && booking.sessionTime);
+  const detailsHtml = isSession
+    ? `<p style="margin:4px 0;"><strong>Session:</strong> ${booking.program}</p>
+       <p style="margin:4px 0;"><strong>Date:</strong> ${booking.sessionDate}</p>
+       <p style="margin:4px 0;"><strong>Time:</strong> ${booking.sessionTime}${booking.hours ? ` &middot; ${booking.hours} ${booking.hours === 1 ? "hour" : "hours"}` : ""}</p>`
+    : `<p style="margin:4px 0;"><strong>Program:</strong> ${booking.program}</p>`;
+
+  const paymentHtml = booking.paymentStatus === "paid"
+    ? `<p style="margin:4px 0;"><strong>Amount paid:</strong> ₦${Number(booking.amountPaid || 0).toLocaleString("en-NG")}</p>`
+    : "";
+
+  return { isSession, detailsHtml, paymentHtml };
+}
+
+// Sent to the client who made the booking/enrollment.
+async function sendClientConfirmationEmail(booking) {
+  if (!resend || !booking.email) return;
+  const { isSession, detailsHtml, paymentHtml } = bookingDetailsHtml(booking);
+  const subject = isSession ? `You're booked: ${booking.program}` : `Enrollment received: ${booking.program}`;
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: booking.email,
+      subject,
+      html: `
+        <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+          <h2 style="color:#0f4c3a; margin-bottom: 4px;">Assalamu Alaikum ${booking.name},</h2>
+          <p>${isSession ? "Your session has been booked." : "We've received your enrollment request."}</p>
+          <div style="background:#f7f7f5; border-radius:12px; padding:16px 20px; margin:20px 0;">
+            ${detailsHtml}
+            ${paymentHtml}
+          </div>
+          <p>Our team will reach out shortly with next steps, in shā' Allāh.</p>
+          <p style="color:#888; font-size:12px; margin-top:32px;">COHATA &mdash; Coach Halima Transformational Academy</p>
+        </div>
+      `,
+    });
+  } catch (e) {
+    console.error("Failed to send client confirmation email:", e.message);
+  }
+}
+
+// Sent to every staff user in Team & Access, regardless of role.
+async function sendAdminNotificationEmail(booking) {
+  if (!resend) return;
+  const staff = await User.find({}, "email");
+  const recipients = staff.map((u) => u.email).filter(Boolean);
+  if (recipients.length === 0) return;
+
+  const { isSession, detailsHtml, paymentHtml } = bookingDetailsHtml(booking);
+  const kind = isSession ? "session booking" : "program enrollment";
+  const subject = `New ${kind}: ${booking.name} — ${booking.program}`;
+
+  try {
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: recipients,
+      subject,
+      html: `
+        <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+          <h2 style="color:#0f4c3a; margin-bottom: 4px;">New ${kind}</h2>
+          <p style="margin:4px 0;"><strong>Client:</strong> ${booking.name}</p>
+          <p style="margin:4px 0;"><strong>Phone:</strong> ${booking.phone}</p>
+          ${booking.email ? `<p style="margin:4px 0;"><strong>Email:</strong> ${booking.email}</p>` : ""}
+          <div style="background:#f7f7f5; border-radius:12px; padding:16px 20px; margin:20px 0;">
+            ${detailsHtml}
+            ${paymentHtml}
+          </div>
+          ${booking.notes ? `<p style="margin:4px 0;"><strong>Notes:</strong> ${booking.notes}</p>` : ""}
+          <p><a href="${FRONTEND_URL}/admin/dashboard" style="color:#0f4c3a;">Open the admin dashboard &rarr;</a></p>
+        </div>
+      `,
+    });
+  } catch (e) {
+    console.error("Failed to send admin notification email:", e.message);
+  }
+}
+
+// Sent to the client via Termii. Edit the message copy below to change what it says.
+async function sendClientConfirmationSms(booking) {
+  if (!TERMII_API_KEY || !booking.phone) return;
+  const isSession = !!(booking.sessionDate && booking.sessionTime);
+
+  const message = isSession
+    ? `Asalamu Alaikum ${booking.name}, your ${booking.program} session on ${booking.sessionDate} at ${booking.sessionTime} is confirmed. We'll be in touch with next steps. - COHATA`
+    : `Asalamu Alaikum ${booking.name}, your ${booking.program} enrollment has been received. We'll be in touch with next steps. - COHATA`;
+
+  try {
+    const res = await fetch("https://api.ng.termii.com/api/sms/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: TERMII_API_KEY,
+        to: normalizeNigerianPhone(booking.phone),
+        from: TERMII_SENDER_ID,
+        sms: message,
+        type: "plain",
+        channel: "generic",
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error("Termii SMS not sent:", json);
+    }
+  } catch (e) {
+    console.error("Failed to send confirmation SMS:", e.message);
+  }
+}
+
+// Call this whenever a booking/enrollment is created or confirmed paid —
+// notifies both the client (email + SMS) and every staff user (email) in one go.
+async function notifyNewBooking(booking) {
+  await Promise.all([
+    sendClientConfirmationEmail(booking),
+    sendClientConfirmationSms(booking),
+    sendAdminNotificationEmail(booking),
+  ]);
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────
@@ -311,6 +460,7 @@ app.get("/api/bookings", authenticate, requireRole("admin", "finance", "bookings
 app.post("/api/bookings", async (req, res) => {
   try {
     const booking = await Booking.create(req.body);
+    await notifyNewBooking(booking);
     res.status(201).json(booking);
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
