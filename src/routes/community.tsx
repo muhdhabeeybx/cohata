@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
 import { useState } from "react";
 import { MessageCircle, Heart, Sparkles, Check } from "lucide-react";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/community")({
   component: Community,
@@ -16,17 +17,33 @@ export const Route = createFileRoute("/community")({
 });
 
 function Community() {
-  const [form, setForm] = useState({ name: "", email: "", country: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", country: "" });
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      await api.post("/api/community-signups", form);
+      setDone(true);
+    } catch {
+      setError("Something went wrong. Please try again or contact us directly.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Layout>
       <section className="max-w-5xl mx-auto px-6 lg:px-10 pt-20 pb-12 text-center">
         <p className="text-xs uppercase tracking-[0.3em] text-gold mb-6">Sisterhood</p>
         <h1 className="font-display text-5xl md:text-6xl text-primary text-balance leading-tight">
-          A community of women walking the path together.
+          A community of <em className="text-gold italic font-display">women</em> walking the path <em className="text-gold italic font-display">together</em>.
         </h1>
-        <p className="mt-8 text-lg text-foreground/70 max-w-2xl mx-auto">
+        <p className="mt-8 text-lg text-black max-w-2xl mx-auto">
           Structured reflections, weekly prompts, accountability circles, and the warmth of a
           sisterhood rooted in faith.
         </p>
@@ -40,8 +57,8 @@ function Community() {
         ].map(({ icon: I, t, d }) => (
           <div key={t} className="bg-card border border-border rounded-3xl p-8 text-center">
             <I className="text-gold mx-auto mb-4" />
-            <h3 className="text-xl text-primary mb-2">{t}</h3>
-            <p className="text-sm text-foreground/70">{d}</p>
+            <p className="text-xl font-semibold mb-2 text-primary">{t}</p>
+            <p className="text-lg text-black">{d}</p>
           </div>
         ))}
       </section>
@@ -60,12 +77,14 @@ function Community() {
             <>
               <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">Join the Sisterhood</p>
               <h2 className="font-display text-3xl md:text-4xl mb-8">Reserve your seat in the circle.</h2>
-              <form onSubmit={(e) => { e.preventDefault(); setDone(true); }} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <input required placeholder="Your name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-primary-foreground/10 border border-primary-foreground/20 placeholder:text-primary-foreground/50 focus:outline-none focus:border-gold" />
                 <input required type="email" placeholder="Email address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-primary-foreground/10 border border-primary-foreground/20 placeholder:text-primary-foreground/50 focus:outline-none focus:border-gold" />
-                <input required placeholder="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-primary-foreground/10 border border-primary-foreground/20 placeholder:text-primary-foreground/50 focus:outline-none focus:border-gold" />
-                <button type="submit" className="w-full bg-gradient-gold text-gold-foreground py-4 rounded-full font-medium shadow-gold mt-2">
-                  Join the Community
+                <input required type="tel" placeholder="WhatsApp phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-primary-foreground/10 border border-primary-foreground/20 placeholder:text-primary-foreground/50 focus:outline-none focus:border-gold" />
+                {/* <input required placeholder="Country" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className="w-full px-5 py-3 rounded-xl bg-primary-foreground/10 border border-primary-foreground/20 placeholder:text-primary-foreground/50 focus:outline-none focus:border-gold" /> */}
+                {error && <p className="text-sm text-red-300">{error}</p>}
+                <button type="submit" disabled={submitting} className="w-full bg-gradient-gold text-gold-foreground py-4 rounded-full font-medium shadow-gold mt-2 disabled:opacity-60">
+                  {submitting ? "Joining…" : "Join the Community"}
                 </button>
               </form>
             </>

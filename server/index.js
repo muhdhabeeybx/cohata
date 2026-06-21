@@ -129,6 +129,21 @@ sessionTypeSchema.set("toJSON", {
 
 const SessionType = mongoose.model("SessionType", sessionTypeSchema);
 
+// Sisterhood community sign-ups (from /community)
+const communitySignupSchema = new mongoose.Schema({
+  name:      { type: String, required: true },
+  email:     { type: String, required: true },
+  phone:     { type: String, required: true },
+  country:   { type: String, default: "" },
+  createdAt: { type: String, default: () => new Date().toISOString() },
+}, { versionKey: false });
+
+communitySignupSchema.set("toJSON", {
+  transform: (_doc, ret) => { ret.id = ret._id.toString(); delete ret._id; return ret; },
+});
+
+const CommunitySignup = mongoose.model("CommunitySignup", communitySignupSchema);
+
 // ─── Users / roles ────────────────────────────────────────────────────────────
 
 const ROLES = ["admin", "finance", "bookings", "programs"];
@@ -745,6 +760,26 @@ app.delete("/api/session-types/:id", authenticate, requireRole("admin", "booking
     const result = await SessionType.findByIdAndDelete(req.params.id);
     if (!result) return res.status(404).json({ error: "Not found" });
     res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Community sign-ups ──────────────────────────────────────────────────────
+
+app.post("/api/community-signups", async (req, res) => {
+  try {
+    const { name, email, phone, country } = req.body;
+    if (!name || !email || !phone) {
+      return res.status(400).json({ error: "Name, email, and phone are required" });
+    }
+    const signup = await CommunitySignup.create({ name, email, phone, country });
+    res.status(201).json(signup);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.get("/api/community-signups", authenticate, requireRole("admin", "bookings"), async (_req, res) => {
+  try {
+    const signups = await CommunitySignup.find().sort({ createdAt: -1 });
+    res.json(signups);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

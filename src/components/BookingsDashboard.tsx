@@ -117,6 +117,15 @@ interface StaffUser {
   createdAt: string;
 }
 
+interface CommunitySignup {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  country?: string;
+  createdAt: string;
+}
+
 export interface SessionTypeData {
   id: string;
   name: string;
@@ -129,7 +138,7 @@ export interface SessionTypeData {
   createdAt: string;
 }
 
-type View = "overview" | "bookings" | "enrollments" | "payments" | "availability" | "programs" | "team" | "sessions";
+type View = "overview" | "bookings" | "enrollments" | "payments" | "availability" | "programs" | "team" | "sessions" | "community";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -187,6 +196,7 @@ const NAV: { id: View; label: string; sub: string; Icon: typeof LayoutDashboard;
   { id: "programs",     label: "Manage Programs",        sub: "Manage courses and offerings",        Icon: BookOpen,        roles: ["admin", "programs"] },
   { id: "sessions",     label: "Manage Sessions",       sub: "Configure pricing and durations",     Icon: Layers,          roles: ["admin", "bookings"] },
   { id: "team",         label: "Manage Team & Access",       sub: "Staff accounts and permissions",      Icon: ShieldCheck,     roles: ["admin"] },
+  { id: "community",    label: "Community Sign-ups",         sub: "Sisterhood WhatsApp circle requests", Icon: Users,           roles: ["admin", "bookings"] },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -343,6 +353,7 @@ export function BookingsDashboard() {
   const [loading, setLoading] = useState(true);
   const [maintenance, setMaintenance] = useState(false);
   const [maintenanceSaving, setMaintenanceSaving] = useState(false);
+  const [communitySignups, setCommunitySignups] = useState<CommunitySignup[]>([]);
 
   const refreshAll = useCallback(async () => {
     setLoading(true);
@@ -355,6 +366,7 @@ export function BookingsDashboard() {
       };
       if (canViewBookings) tasks.bookings = api.get<Booking[]>("/api/bookings");
       if (isAdmin) tasks.users = api.get<StaffUser[]>("/api/users");
+      if (canManageBookings) tasks.communitySignups = api.get<CommunitySignup[]>("/api/community-signups");
 
       const keys = Object.keys(tasks);
       const results = await Promise.allSettled(keys.map((k) => tasks[k]));
@@ -371,6 +383,7 @@ export function BookingsDashboard() {
           case "maintenance": setMaintenance((r.value as { enabled: boolean }).enabled); break;
           case "users": setUsers(r.value as StaffUser[]); break;
           case "sessionTypes": setSessionTypes(r.value as SessionTypeData[]); break;
+          case "communitySignups": setCommunitySignups(r.value as CommunitySignup[]); break;
         }
       });
     } finally {
@@ -969,6 +982,64 @@ export function BookingsDashboard() {
                         <code className="text-xs text-muted-foreground font-mono">{b.paymentReference ? b.paymentReference.slice(-12) : "—"}</code>
                       </td>
                       <td className="px-4 py-3.5 text-xs text-muted-foreground hidden xl:table-cell">{fmt(b.paidAt ?? b.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Community sign-ups ──────────────────────────────────────────────────────────
+
+  function CommunityContent() {
+    const sorted = [...communitySignups].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+    return (
+      <div className="space-y-5">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <h3 className="font-sans font-semibold text-sm text-foreground">Sisterhood Sign-ups</h3>
+            <span className="text-xs text-muted-foreground">{sorted.length} total</span>
+          </div>
+          {sorted.length === 0 ? (
+            <div className="py-16 text-center text-sm text-muted-foreground">No community sign-ups yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Name</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">Email</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">WhatsApp</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Country</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Joined</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {sorted.map((s) => (
+                    <tr key={s.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={s.name} />
+                          <p className="font-medium text-foreground text-sm">{s.name}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 hidden md:table-cell">
+                        <p className="text-sm text-foreground/80">{s.email}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <a href={waUrl(s.phone)} target="_blank" rel="noopener noreferrer" className="text-sm text-emerald-700 hover:underline inline-flex items-center gap-1.5">
+                          <MessageCircle size={13} /> {s.phone}
+                        </a>
+                      </td>
+                      <td className="px-4 py-3.5 hidden lg:table-cell">
+                        <p className="text-sm text-foreground/70">{s.country || "—"}</p>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-muted-foreground hidden xl:table-cell">{fmt(s.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1709,6 +1780,8 @@ export function BookingsDashboard() {
                     ? `${enrollmentBookings.length} enrollment${enrollmentBookings.length !== 1 ? "s" : ""} · ${enrollmentBookings.filter(b => b.status === "Pending").length} pending`
                     : view === "payments"
                     ? `${paymentBookings.length} transaction${paymentBookings.length !== 1 ? "s" : ""} · ₦${stats.revenue.toLocaleString("en-NG")} collected`
+                    : view === "community"
+                    ? `${communitySignups.length} sign-up${communitySignups.length !== 1 ? "s" : ""}`
                     : visibleNav.find(n => n.id === view)?.sub ?? ""}
                 </p>
               </div>
@@ -1742,6 +1815,7 @@ export function BookingsDashboard() {
             {view === "programs"     && <ProgramsContent />}
             {view === "team"         && <TeamContent />}
             {view === "sessions"     && <SessionTypesContent />}
+            {view === "community"    && <CommunityContent />}
           </main>
         </div>
 

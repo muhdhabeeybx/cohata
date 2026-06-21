@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
 import heroImg from "@/assets/hero.jpg";
+import quoteBandImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.39 (1).jpeg";
+import coachHalima from "@/assets/WhatsApp Image 2026-06-17 at 11.01.38.jpeg";
 import {
   Heart,
   Compass,
@@ -45,10 +47,10 @@ const different = [
 ];
 
 const milestones = [
-  ["7+", "Years guiding transformation"],
-  ["1000+", "Women & families supported"],
-  ["12+", "Signature programs & workshops"],
-  ["5", "Stages in the COHATA model"],
+  { n: "7+", l: "Years Guiding Transformation", icon: Calendar },
+  { n: "1000+", l: "Women & Families Supported", icon: Users },
+  { n: "12+", l: "Programs & Workshops", icon: BookOpen },
+  { n: "5", l: "Stages in the COHATA Model", icon: Sparkles },
 ];
 
 function About() {
@@ -58,16 +60,14 @@ function About() {
       <section className="relative overflow-hidden bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-20 pb-16 lg:pt-28 lg:pb-20 grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7">
-            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gold mb-6 bg-gold/15 px-4 py-2 rounded-full">
+            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] font-semibold text-gold mb-6 bg-gold/15 px-4 py-2 rounded-full">
               <Sparkles size={14} /> About COHATA
             </p>
-            <h1 className="font-display text-5xl md:text-6xl text-primary text-balance leading-tight">
-              Where faith is not an addition — it is the foundation.
+            <h1 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[1.05] text-balance text-primary">
+              Where <em className="text-gold italic font-display">faith</em> is not an addition but the <em className="text-gold italic font-display">foundation</em>.
             </h1>
-            <p className="mt-8 text-lg text-foreground/70 max-w-xl text-pretty">
-              COHATA (Coach Halima Transformational Academy) is a faith-based transformation and
-              development platform dedicated to helping Muslim women and families build lives rooted in
-              clarity, structure, and intentional living.
+            <p className="mt-8 text-lg text-black max-w-xl text-pretty">
+              Coach Halima Transformational Academy (COHATA) is a faith-based transformation and development platform dedicated to helping Muslim women and families build lives rooted in clarity, structure, and intentional living.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Link to="/book" className="w-full sm:w-auto justify-center bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
@@ -79,13 +79,13 @@ function About() {
             </div>
           </div>
           <div className="lg:col-span-5 relative">
-            <div className="aspect-[4/5] rounded-3xl overflow-hidden relative border-4 border-gold/30">
-              <img src={heroImg} alt="Coach Halima with women from the COHATA community" className="w-full h-full object-cover" width={1536} height={1280} />
+            <div className="aspect-[4/5] rounded-3xl overflow-hidden relative">
+              <img src={quoteBandImg} alt="Coach Halima with women from the COHATA community" className="w-full h-full object-cover" width={1536} height={1280} />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/50 via-primary/5 to-transparent" />
             </div>
             <div className="absolute -bottom-6 -left-6 bg-gradient-gold rounded-2xl p-5 hidden md:flex items-center gap-3">
               <Quote className="text-gold-foreground" size={22} />
-              <p className="text-lg text-gold-foreground max-w-[12rem] leading-snug">
+              <p className="text-lg font-bold text-gold-foreground max-w-[18rem] leading-snug">
                 "Every transformation begins with a single, honest step."
               </p>
             </div>
@@ -96,7 +96,7 @@ function About() {
       {/* Vision & Mission — bold dark band */}
       <section className="py-20 lg:py-24 bg-primary text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle_at_15%_25%,white,transparent_42%),radial-gradient(circle_at_85%_75%,var(--gold),transparent_45%)]" />
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 grid md:grid-cols-2 gap-6 relative">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 grid md:grid-cols-2 gap-12 relative">
           <div className="bg-primary-foreground/[0.06] border border-primary-foreground/15 p-10 rounded-3xl">
             <div className="w-12 h-12 rounded-xl bg-gold/20 text-gold flex items-center justify-center mb-6">
               <Eye size={22} />
@@ -123,12 +123,13 @@ function About() {
       </section>
 
       {/* Milestones strip */}
-      <section className="py-16 bg-background border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 grid grid-cols-2 md:grid-cols-4 gap-8">
-          {milestones.map(([n, l]) => (
-            <div key={l} className="text-center">
-              <p className="text-4xl md:text-5xl text-primary">{n}</p>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground mt-2">{l}</p>
+      <section className="py-16 bg-black text-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 grid grid-cols-2 md:grid-cols-4 gap-16">
+          {milestones.map(({ n, l, icon: Icon }) => (
+            <div key={l} className="text-left">
+              <Icon size={20} className="text-gold mb-3" />
+              <p className="font-semibold text-3xl md:text-4xl">{n}</p>
+              <p className="text-lg text-white/60 mt-2">{l}</p>
             </div>
           ))}
         </div>
@@ -138,13 +139,13 @@ function About() {
       <section className="py-24 bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 relative">
-            <div className="aspect-square rounded-3xl overflow-hidden relative border-4 border-primary/15">
-              <img src={heroImg} alt="Coach Halima, founder of COHATA" className="w-full h-full object-cover" />
+            <div className="aspect-square rounded-3xl overflow-hidden relative">
+              <img src={coachHalima} alt="Coach Halima, founder of COHATA" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-tr from-gold/35 via-transparent to-primary/30" />
             </div>
-            <div className="absolute -top-6 -right-6 bg-primary text-primary-foreground rounded-2xl p-5 hidden md:flex items-center gap-3">
-              <Sparkles className="text-gold" size={22} />
-              <p className="text-lg">Meet Coach Halima</p>
+            <div className="absolute -bottom-4 -left-4 bg-primary text-primary-foreground rounded-md p-4 hidden md:flex items-center gap-3">
+              <Sparkles className="text-gold" size={16} />
+              <p className="text-[14px]">Meet Coach Halima</p>
             </div>
           </div>
           <div className="lg:col-span-7">
@@ -152,39 +153,55 @@ function About() {
               <Heart size={14} /> The Heart Behind COHATA
             </p>
             <h2 className="font-display text-4xl md:text-5xl text-primary text-balance mb-6">
-              A guide who has walked the journey herself.
+              A guide who has walked the journey <em className="text-gold italic font-display">herself</em>.
             </h2>
-            <p className="text-foreground/70 text-lg max-w-xl text-pretty mb-4">
+            <p className="text-black text-lg max-w-xl text-pretty mb-4">
               Coach Halima founded COHATA from a simple conviction: that real transformation happens
               when faith, structure, and genuine care come together. Every program, every session, and
               every community circle carries that same intention — to walk alongside you, not just point
               you in a direction.
             </p>
-            <p className="text-foreground/70 text-lg max-w-xl text-pretty mb-8">
+            <p className="text-black text-lg max-w-xl text-pretty mb-8">
               Over the years, that conviction has grown into a full academy — coaching, mentorship,
               workshops, and a sisterhood — all rooted in Islamic principles and built for real life.
             </p>
-            <Link to="/book" className="bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2 w-fit">
+            {/* <Link to="/book" className="bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2 w-fit">
               <Calendar size={18} /> Book Time With Coach Halima
-            </Link>
+            </Link> */}
           </div>
         </div>
       </section>
 
       {/* Philosophy — We believe */}
       <section className="py-24 bg-secondary/40">
-        <div className="max-w-5xl mx-auto px-6 lg:px-10">
-          <p className="text-xs uppercase tracking-[0.3em] text-gold mb-6">Our Philosophy</p>
-          <h2 className="font-display text-4xl md:text-5xl text-primary mb-12 text-balance">
-            We believe...
-          </h2>
-          <ul className="space-y-4">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <div className="grid lg:grid-cols-12 gap-8 items-end mb-14">
+            <div className="lg:col-span-7">
+              <p className="text-xs uppercase tracking-[0.3em] text-gold mb-4 font-semibold">Our Philosophy</p>
+              <h2 className="font-display text-4xl md:text-5xl text-primary text-balance">
+                We <em className="text-gold italic font-display">believe</em>...
+              </h2>
+            </div>
+            <div className="lg:col-span-5">
+              <p className="text-black text-lg leading-relaxed">
+                The five convictions that shape every program, session, and conversation at COHATA.
+              </p>
+            </div>
+          </div>
+
+          <ul className="grid md:grid-cols-2 gap-5">
             {beliefs.map(({ icon: Icon, text }, i) => (
-              <li key={i} className="flex gap-6 items-center bg-card border-2 border-border hover:border-gold/50 rounded-2xl p-6 transition">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <li
+                key={i}
+                className={`group relative overflow-hidden bg-card border-2 border-border hover:border-gold/50 rounded-2xl p-7 transition-all hover:shadow-lg ${i === beliefs.length - 1 ? "md:col-span-2" : ""}`}
+              >
+                <span className="absolute -top-2 right-4 font-display text-5xl text-primary/[0.06] group-hover:text-gold/10 transition-colors select-none">
+                  0{i + 1}
+                </span>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-5 group-hover:bg-gold group-hover:text-gold-foreground transition-colors relative">
                   <Icon size={22} />
                 </div>
-                <p className="text-xl md:text-2xl text-primary/90 leading-snug">{text}</p>
+                <p className="text-xl md:text-2xl text-primary/90 leading-snug relative">{text}</p>
               </li>
             ))}
           </ul>
@@ -192,22 +209,22 @@ function About() {
       </section>
 
       {/* What makes us different */}
-      <section className="py-24 bg-background">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="max-w-2xl mb-14 text-center mx-auto">
             <p className="text-xs uppercase tracking-[0.3em] text-gold mb-4">What Makes Us Different</p>
             <h2 className="font-display text-4xl md:text-5xl text-primary text-balance">
-              Structured transformation, not just motivation.
+              Structured <em className="text-gold italic font-display">transformation</em>, not just motivation.
             </h2>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {different.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="bg-card border-2 border-primary/10 hover:border-gold/40 rounded-2xl p-7 transition">
-                <div className="w-12 h-12 rounded-xl bg-gold text-gold-foreground flex items-center justify-center mb-5">
+              <div key={title} className="bg-card p-8 rounded-2xl border-1 border-gold/10 hover:border-gold/40 transition">
+                <div className="w-12 h-12 rounded-full bg-gold text-primary-foreground flex items-center justify-center mb-5">
                   <Icon size={22} />
                 </div>
-                <h3 className="text-xl text-primary mb-2">{title}</h3>
-                <p className="text-foreground/70 text-sm leading-relaxed">{text}</p>
+                <p className="text-xl font-semibold mb-2 text-primary">{title}</p>
+                <p className="text-black text-sm leading-relaxed">{text}</p>
               </div>
             ))}
           </div>
@@ -222,9 +239,9 @@ function About() {
             <div className="relative">
               <Sparkles className="text-gold mx-auto mb-6" size={32} />
               <h2 className="font-display text-3xl md:text-5xl text-balance max-w-2xl mx-auto mb-6">
-                Ready to begin your own story of transformation?
+                Ready to begin your own story of <em className="text-gold italic font-display">transformation</em>?
               </h2>
-              <p className="text-white/60 max-w-xl mx-auto mb-10 text-pretty">
+              <p className="text-white/60 text-lg max-w-xl mx-auto mb-10 text-pretty">
                 Whether it's a conversation, a program, or a community — your first step starts here.
               </p>
               <div className="flex flex-col sm:flex-row sm:justify-center gap-3 sm:gap-4">

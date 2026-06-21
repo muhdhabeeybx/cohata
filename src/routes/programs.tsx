@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { Program } from "@/components/BookingsDashboard";
 import { Clock, Calendar, X, Check, ChevronRight, Sparkle } from "lucide-react";
+import programsHeroImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.40.jpeg";
 
 export const Route = createFileRoute("/programs")({
   component: Programs,
@@ -165,10 +166,10 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
             <div className="flex items-start justify-between mb-6">
               <div>
                 {program.tag && <p className="text-xs uppercase tracking-[0.3em] text-gold mb-1">{program.tag}</p>}
-                <h3 className="text-2xl text-primary">{program.title}</h3>
-                {isPaid && (
+                <p className="text-2xl font-semibold mb-2 text-primary">{program.title}</p>
+                {/* {isPaid && (
                   <p className="text-sm text-foreground/60 mt-1">Enrollment fee: <strong className="text-foreground">{formatNaira(program.amount)}</strong></p>
-                )}
+                )} */}
               </div>
               <button type="button" title="Close" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors mt-1">
                 <X size={20} />
@@ -192,14 +193,14 @@ function EnrollModal({ program, onClose }: { program: Program; onClose: () => vo
               </div>
               <div>
                 <label htmlFor="enroll-note" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  What are you hoping to gain? <span className="normal-case font-normal">(optional)</span>
+                  What are you hoping to gain?
                 </label>
                 <textarea id="enroll-note" rows={3} placeholder="Share your intention or goal…" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="w-full mt-1 px-4 py-3 rounded-xl border border-input bg-background focus:outline-none focus:border-primary text-sm resize-none" />
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onClose} className="flex-1 border border-border py-3 rounded-full text-sm font-medium hover:bg-muted/40 transition-colors">Cancel</button>
-                <button type="submit" disabled={submitting} className="flex-1 bg-primary text-primary-foreground py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60">
+                <button type="submit" disabled={submitting} className="flex-1 bg-primary text-primary-foreground py-3 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60">
                   {submitting ? (isPaid ? "Opening payment…" : "Sending…") : isPaid ? `Pay ${formatNaira(program.amount)} & Enroll` : "Submit Enrollment"}
                 </button>
               </div>
@@ -224,8 +225,8 @@ function ProgramModal({ program, onClose, onEnroll }: { program: Program; onClos
         <div className="p-8 overflow-y-auto flex-1">
           <div className="flex items-start justify-between gap-4 mb-5">
             <div>
-              {program.tag && <p className="text-xs uppercase tracking-[0.3em] text-gold mb-1.5 font-medium">{program.tag}</p>}
-              <h2 className="font-display text-3xl text-primary leading-tight">{program.title}</h2>
+              {program.tag && <p className="text-xs uppercase tracking-[0.3em] text-primary mb-1.5 font-medium">{program.tag}</p>}
+              <p className="text-2xl font-semibold mb-2 text-gold">{program.title}</p>
             </div>
             <button type="button" title="Close" onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 mt-1">
               <X size={20} />
@@ -234,29 +235,29 @@ function ProgramModal({ program, onClose, onEnroll }: { program: Program; onClos
 
           <div className="flex flex-wrap gap-2 mb-6">
             {program.duration && (
-              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-primary/8 text-primary border border-primary/15 font-medium">
-                <Clock size={11} /> {program.duration}
+              <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-primary/8 text-primary border border-primary/15 font-medium">
+                <Clock size={12} /> {program.duration}
               </span>
             )}
             {program.startDate && (
-              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted/60 text-foreground/70 border border-border font-medium">
+              <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-muted/60 text-foreground/70 border border-border font-medium">
                 <Calendar size={11} /> Starts {fmt(program.startDate)}
               </span>
             )}
             {program.amount > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-gold/10 text-foreground border border-gold/30 font-semibold">
+              <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-primary text-primary-foreground border border-primary/30 font-semibold">
                 {formatNaira(program.amount)}
               </span>
             )}
             {program.enrollmentOpen && (
-              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+              <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Enrollment Open
               </span>
             )}
           </div>
 
           {(program.fullDescription || program.description) && (
-            <div className="text-foreground/70 leading-relaxed whitespace-pre-line mb-8 text-sm">
+            <div className="text-black leading-relaxed whitespace-pre-line mb-8 text-lg">
               {program.fullDescription || program.description}
             </div>
           )}
@@ -264,7 +265,8 @@ function ProgramModal({ program, onClose, onEnroll }: { program: Program; onClos
           <div className="flex flex-col sm:flex-row gap-3">
             {program.enrollmentOpen ? (
               <button type="button" onClick={onEnroll} className="flex-1 sm:flex-initial bg-primary text-primary-foreground px-8 py-3.5 rounded-full font-medium hover:opacity-90 transition-opacity">
-                {program.amount > 0 ? `Enroll & Pay ${formatNaira(program.amount)}` : "Enroll Now"}
+                {program.amount > 0 ? `Enroll Now` : "Enroll Now"}
+                {/* {program.amount > 0 ? `Enroll & Pay ${formatNaira(program.amount)}` : "Enroll Now"} */}
               </button>
             ) : (
               <span className="text-sm text-muted-foreground italic">Enrollment is currently closed for this program.</span>
@@ -299,23 +301,33 @@ function Programs() {
   return (
     <Layout>
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 lg:px-10 pt-20 pb-14">
-        <p className="text-xs uppercase tracking-[0.3em] text-gold mb-6 font-medium">Programs & Mentorship</p>
-        <h1 className="font-display text-5xl md:text-6xl text-primary text-balance leading-tight">
-          Long-term journeys.<br />Lasting transformation.
-        </h1>
-        <p className="mt-8 text-lg text-foreground/70 max-w-2xl">
-          Choose a structured program and walk a guided path with COHATA — from clarity to
-          alignment, application, and sustained growth.
-        </p>
+      <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
+        <img src={programsHeroImg} alt="Coach Halima leading a COHATA program session" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 to-black/40" />
+        <div className="relative h-full max-w-7xl mx-auto px-6 lg:px-10 flex items-end pb-16">
+          <div className="grid lg:grid-cols-12 gap-8 w-full items-end">
+            <div className="lg:col-span-7">
+              <p className="text-xs uppercase tracking-[0.3em] text-gold mb-6">Programs & Mentorship</p>
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-primary-foreground text-balance leading-tight">
+                Long-term <em className="text-gold italic font-display">journeys</em>. Lasting transformation.
+              </h1>
+            </div>
+            <div className="lg:col-span-5">
+              <p className="text-lg text-white text-pretty lg:text-right">
+                Choose a structured program and walk a guided path with COHATA — from clarity to
+                alignment, application, and sustained growth.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Programs grid */}
-      <section className="max-w-7xl mx-auto px-6 lg:px-10 pb-24">
+      <section className="max-w-7xl mx-auto px-6 lg:px-10 pt-24 pb-24">
 
         {/* Loading skeletons */}
         {loadState === "loading" && (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 xl:grid-cols-2 gap-6">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-card border border-border rounded-3xl overflow-hidden animate-pulse">
                 <div className="aspect-video bg-muted" />
@@ -347,7 +359,7 @@ function Programs() {
         )}
 
         {loadState === "done" && programs.length > 0 && (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 xl:grid-cols-2 gap-12">
             {programs.map((p) => (
               <article
                 key={p.id}
@@ -377,17 +389,25 @@ function Programs() {
                 {/* Body */}
                 <div className="p-7 flex flex-col flex-1">
                   {p.tag && <p className="text-[11px] uppercase tracking-[0.25em] text-gold mb-2 font-semibold">{p.tag}</p>}
-                  <h2 className="font-display text-xl text-primary mb-3 leading-snug">{p.title}</h2>
-                  <p className="text-sm text-foreground/65 flex-1 leading-relaxed line-clamp-3">{p.description}</p>
+                  <p className="text-xl font-semibold mb-2 text-primary">{p.title}</p>
+                  <p className="text-lg text-black flex-1 leading-relaxed line-clamp-3">{p.description}</p>
 
-                  <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      {p.duration && <span className="flex items-center gap-1"><Clock size={10} />{p.duration}</span>}
-                      {p.amount > 0 && <span className="font-semibold text-foreground">{formatNaira(p.amount)}</span>}
+                  <div className="mt-5 pt-4 border-t border-border flex items-center justify-between gap-6">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {p.duration && (
+                        <span className="text-lg text-primary bg-primary/8 flex px-6 py-2 rounded-full items-center gap-1.5">
+                          <Clock size={16} />{p.duration}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                      View details <ChevronRight size={12} />
-                    </span>
+                    {p.amount > 0 ? (
+                        <span className="text-lg font-semibold text-white bg-primary px-6 py-2 rounded-full">{formatNaira(p.amount)}</span>
+                      ) : (
+                        <span className="text-lg font-semibold text-white bg-primary px-6 py-2 rounded-full">Free</span>
+                    )}
+                    {/* <span className="text-lg font-normal text-primary flex items-center gap-1 flex-shrink-0 group-hover:text-gold transition-colors">
+                      View details <ChevronRight size={16} />
+                    </span> */}
                   </div>
                 </div>
               </article>
@@ -397,7 +417,7 @@ function Programs() {
       </section>
 
       {/* Black CTA band */}
-      <section className="bg-foreground text-background py-20">
+      {/* <section className="bg-foreground text-background py-20">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="font-display text-3xl md:text-4xl mb-4">Prefer one-on-one guidance?</h2>
           <p className="text-background/60 mb-8">Book a private session with the COHATA team and find the right path for you.</p>
@@ -405,7 +425,7 @@ function Programs() {
             Book a Session
           </Link>
         </div>
-      </section>
+      </section> */}
 
       {/* Program detail popup */}
       {viewingProgram && (

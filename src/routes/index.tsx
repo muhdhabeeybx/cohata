@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
-import heroImg from "@/assets/hero.jpg";
+import heroImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.38 (1).jpeg";
+import quoteBandImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.39 (1).jpeg";
+import sisterHood from "@/assets/WhatsApp Image 2026-06-17 at 11.01.50-cropped.jpeg";
 import {
   Heart,
   Compass,
@@ -72,9 +74,8 @@ function Home() {
             <h1 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[1.05] text-balance text-primary">
               A warm <em className="text-gold italic font-display">space</em> for <em className="text-gold italic font-display">healing</em>, clarity & intentional living.
             </h1>
-            <p className="mt-5 text-lg text-foreground/70 max-w-xl leading-snug text-pretty">
-              COHATA guides Muslim women and families through coaching, mentorship, and structured programs —
-              where faith isn't an add-on, it's the foundation. Wherever you're starting from, there's a place for you here.
+            <p className="mt-5 text-lg text-black max-w-xl leading-snug text-pretty">
+              COHATA supports Muslim women and families through coaching, mentorship, and structured programs rooted in Islamic values. Faith is at the heart of everything we do, creating a space where you can learn, grow, and thrive no matter where you are on your journey.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4">
               <Link to="/book" className="w-full sm:w-auto justify-center bg-primary text-primary-foreground px-6 py-3 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
@@ -88,7 +89,7 @@ function Home() {
 
           <div className="lg:col-span-5 relative self-stretch">
             <div className="aspect-[4/5] lg:aspect-auto lg:h-full rounded-3xl overflow-hidden relative">
-              <img src={heroImg} alt="Two women sitting on a beach facing the ocean" className="w-full h-full object-cover" width={1536} height={1000} />
+              <img src={heroImg} alt="Two women sitting on a beach facing the ocean" className="w-full h-full object-cover" width={1536} height={1200} />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/50 via-primary/5 to-transparent" />
             </div>
             <div className="absolute -bottom-6 -left-6 bg-gradient-gold rounded-2xl p-5 hidden md:flex items-center gap-3">
@@ -172,7 +173,7 @@ function Home() {
                   <Icon size={22} />
                 </div>
                 <p className="text-xl font-semibold mb-2 text-primary">{title}</p>
-                <p className="text-foreground/70 text-sm leading-relaxed">{text}</p>
+                <p className="text-black text-sm leading-relaxed">{text}</p>
               </div>
             ))}
           </div>
@@ -181,7 +182,7 @@ function Home() {
 
       {/* Image break / quote band */}
       <section className="relative h-[80vh] min-h-[460px] overflow-hidden">
-        <img src={heroImg} alt="Women reflecting together by the ocean" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={quoteBandImg} alt="Women reflecting together by the ocean" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-primary/85 via-primary/55 to-gold/30" />
         <div className="relative h-full max-w-7xl mx-auto px-6 lg:px-10 flex items-center">
           <div className="max-w-xl">
@@ -219,7 +220,7 @@ function Home() {
                   <Icon size={22} />
                 </div>
                 <p className="text-xl font-semibold mb-2 text-primary">{title}</p>
-                <p className="text-foreground/70 text-sm leading-relaxed mb-6 flex-1">{desc}</p>
+                <p className="text-black text-sm leading-relaxed mb-6 flex-1">{desc}</p>
                 <span className="text-sm text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all font-medium">
                   Learn more <ArrowRight size={14} />
                 </span>
@@ -263,7 +264,7 @@ function Home() {
         <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 relative order-2 lg:order-1">
             <div className="aspect-square rounded-3xl overflow-hidden relative">
-              <img src={heroImg} alt="Sisterhood and community" className="w-full h-full object-cover" />
+              <img src={sisterHood} alt="Sisterhood and community" className="w-full h-full object-cover scale-125" style={{ objectPosition: "center 30%" }} />
               <div className="absolute inset-0 bg-gradient-to-tr from-gold/40 via-transparent to-primary/30" />
             </div>
             <div className="absolute -top-4 -right-4 bg-primary text-primary-foreground rounded-2xl p-3 hidden md:flex items-center gap-3">
@@ -278,7 +279,7 @@ function Home() {
             <h2 className="font-display text-4xl md:text-5xl text-primary text-balance mb-6">
               You don't have to <em className="text-gold italic font-display">grow</em> alone. 
             </h2>
-            <p className="text-foreground/70 text-lg max-w-xl text-pretty mb-8">
+            <p className="text-black text-lg max-w-xl text-pretty mb-8">
               Step into a community of women who show up for each other — through reflection circles,
               accountability spaces, and conversations that hold both faith and real life with care.
             </p>
@@ -322,7 +323,7 @@ function Home() {
                   <Icon size={20} />
                 </div>
                 <p className="text-xl font-semibold mb-2 text-primary">{title}</p>
-                <p className="text-foreground/70 mb-6 flex-1">{desc}</p>
+                <p className="text-black mb-6 flex-1">{desc}</p>
                 <Link to={to} className="text-primary font-medium inline-flex items-center gap-2 hover:gap-3 transition-all">
                   {cta} <ArrowRight size={16} />
                 </Link>

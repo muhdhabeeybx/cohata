@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
-import heroImg from "@/assets/hero.jpg";
+import services from "@/assets/WhatsApp Image 2026-06-17 at 11.02.03 (2).jpeg";
+import coachingImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.52.jpeg";
+import trainingImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.43.jpeg";
+import faithImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.55.jpeg";
+import growthImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.45.jpeg";
+import wellnessImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.59.jpeg";
+import mentorshipImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.42.jpeg";
 import {
   ArrowRight,
   Calendar,
@@ -10,7 +16,7 @@ import {
   BookOpen,
   Brain,
   Flower2,
-  Sparkle,
+  Users,
 } from "lucide-react";
 
 export const Route = createFileRoute("/services")({
@@ -27,153 +33,119 @@ export const Route = createFileRoute("/services")({
 
 const groups = [
   {
-    n: "01",
-    icon: MessageCircle,
-    title: "Coaching, Therapy & Counseling",
-    blurb: "One-to-one and family-centered support for the moments that matter most.",
-    items: [
-      "One-on-One Therapy & Counseling",
-      "Marriage Counseling",
-      "Family Counseling",
-      "Pre-Marital Guidance",
-      "Marriage Support Programme",
-      "Life Coaching",
-      "Results Coaching",
-      "Identity & Self-Development Coaching",
-    ],
-  },
-  {
-    n: "02",
-    icon: GraduationCap,
-    title: "Training, Workshops & Capacity Building",
-    blurb: "Practical skills for everyday life — communication, parenting, and beyond.",
-    items: [
-      "Emotional Intelligence & Anger Management",
-      "Communication & Akhlaq Training",
-      "Parenting & Marriage Workshops",
-      "Public Speaking & Presentation",
-      "Financial & Life Skills Training",
-    ],
-  },
-  {
-    n: "03",
-    icon: BookOpen,
-    title: "Faith-Based Learning & Spiritual Development",
-    blurb: "Drawing closer to Allah through study, reflection, and remembrance.",
-    items: ["Qur'an Study & Tafsir Sessions", "Du'a Workshops", "Dhikr & Spiritual Development Sessions"],
-  },
-  {
-    n: "04",
-    icon: Brain,
-    title: "Personal Growth & Inner Development",
-    blurb: "Slowing down to reconnect with yourself, your mind, and your purpose.",
-    items: ["Mind-Body Connection Sessions", "Book Reviews & Guided Reflections"],
-  },
-  {
-    n: "05",
-    icon: Flower2,
-    title: "Wellness & Complementary Support",
-    blurb: "Holistic care for the body alongside the heart and mind.",
-    items: ["Hijama (Cupping Therapy)"],
-  },
+  n: "01",
+  icon: MessageCircle,
+  title: "Coaching, Therapy & Counseling",
+  description: "Life brings seasons of joy, uncertainty, and change. Through coaching, therapy, and family centered counseling, we provide compassionate guidance that helps you heal, grow, and move forward with confidence and clarity.",
+  img: coachingImg,
+},
+{
+  n: "02",
+  icon: GraduationCap,
+  title: "Training, Workshops & Capacity Building",
+  description: "Growth begins with learning. Our practical workshops help you strengthen communication, leadership, parenting, emotional wellbeing, and life skills that empower you to thrive in everyday situations.",
+  img: trainingImg,
+},
+{
+  n: "03",
+  icon: BookOpen,
+  title: "Faith-Based Learning & Spiritual Development",
+  description: "Deepen your connection with Allah through meaningful learning, reflection, and worship. From Qur'an study to guided remembrance, every session is designed to nurture faith and strengthen the heart.",
+  img: faithImg,
+},
+{
+  n: "04",
+  icon: Brain,
+  title: "Personal Growth & Inner Development",
+  description: "True transformation begins within. Through guided reflections, thoughtful discussions, and personal development sessions, we help you build self awareness, purpose, and lasting inner strength.",
+  img: growthImg,
+},
+{
+  n: "05",
+  icon: Flower2,
+  title: "Wellness & Complementary Support",
+  description: "Caring for yourself is part of the journey. Through Sunnah inspired wellness practices and holistic support, we encourage balance, renewal, and healthy living for both body and mind.",
+  img: wellnessImg,
+},
+{
+  n: "06",
+  icon: Users,
+  title: "Mentorship & Sisterhood Community",
+  description: "No one is meant to walk alone. Our mentorship programs and sisterhood circles create a supportive space where women and families can learn, connect, and grow together in faith.",
+  img: mentorshipImg,
+},
 ];
 
 function Services() {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-background">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-20 pb-16 lg:pt-28 lg:pb-20 grid lg:grid-cols-12 gap-12 items-center">
-          <div className="lg:col-span-7">
-            <p className="text-xs uppercase tracking-[0.3em] text-gold mb-6">Our Services</p>
-            <h1 className="font-display text-5xl md:text-6xl text-primary text-balance leading-tight">
-              A guided system for healing, clarity, and growth.
-            </h1>
-            <p className="mt-8 text-lg text-foreground/70 max-w-xl text-pretty">
-              Each offering is structured, intentional, and rooted in Islamic principles — designed to
-              meet you where you are and walk with you toward where Allah is calling you to be.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <Link to="/book" className="w-full sm:w-auto justify-center bg-primary text-primary-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
-                Book a Session
-              </Link>
-              <Link to="/programs" className="w-full sm:w-auto justify-center border-2 border-primary text-primary px-7 py-4 rounded-full font-medium hover:bg-primary hover:text-primary-foreground transition inline-flex items-center gap-2">
-                See Our Programs
-              </Link>
+      <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
+        <img src={services} alt="A coaching session in progress" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 to-black/40" />
+        <div className="relative h-full max-w-7xl mx-auto px-6 lg:px-10 flex items-end pb-16">
+          <div className="grid lg:grid-cols-12 gap-8 w-full items-end">
+            <div className="lg:col-span-7">
+              <p className="text-xs uppercase tracking-[0.3em] text-gold mb-6">Our Services</p>
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-primary-foreground text-balance leading-tight">
+                A guided system for <em className="text-gold italic font-display">healing</em>, clarity, and growth.
+              </h1>
             </div>
-          </div>
-          <div className="lg:col-span-5">
-            <div className="aspect-[4/5] rounded-3xl overflow-hidden">
-              <img src={heroImg} alt="A coaching session in progress" className="w-full h-full object-cover" width={1536} height={1280} />
+            <div className="lg:col-span-5">
+              <p className="text-lg text-white text-pretty lg:text-right">
+                Each offering is structured, intentional, and rooted in Islamic principles — designed to
+                meet you where you are and walk with you toward where Allah is calling you to be.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Service categories — clean editorial list, alternating sides & background tone */}
-      <section>
-        {groups.map((g, i) => (
-          <div key={g.n} className={i % 2 === 0 ? "bg-background" : "bg-secondary/40"}>
-            <div className="max-w-7xl mx-auto px-6 lg:px-10 py-16 lg:py-20">
-              <div className={`grid lg:grid-cols-12 gap-10 lg:gap-16 items-start ${i % 2 === 1 ? "lg:[&>*:first-child]:order-2" : ""}`}>
-                {/* Text side */}
-                <div className="lg:col-span-7">
-                  <div className="flex items-center gap-5 mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0">
-                      <g.icon size={20} />
-                    </div>
-                    <div className="flex items-baseline gap-4">
-                      <span className="text-2xl text-gold">{g.n}</span>
-                      <h2 className="font-display text-3xl md:text-4xl text-primary text-balance">{g.title}</h2>
-                    </div>
+      {/* Service categories — equal-length card grid */}
+      <section className="py-20 lg:py-24 bg-background">
+        <div className="max-w-7xl mx-auto px-12 lg:px-10">
+          <div className="grid md:grid-cols-2 gap-8">
+            {groups.map((g) => (
+              <div key={g.n} className="flex flex-col bg-card border border-border rounded-2xl overflow-hidden">
+                <div className="relative h-64">
+                  <img src={g.img} alt={g.title} className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0" />
+                  <div className="absolute -bottom-5 left-12 z-10 w-14 h-14 rounded-full bg-primary text-white flex items-center justify-center">
+                    <g.icon size={18} />
                   </div>
-                  <p className="text-foreground/60 max-w-lg mb-8">{g.blurb}</p>
-                  <ul className="space-y-3">
-                    {g.items.map((it) => (
-                      <li key={it} className="group flex items-center justify-between gap-4 border-b border-border/60 pb-3">
-                        <span className="inline-flex items-center gap-3 text-foreground/80">
-                          <Sparkle className="text-gold shrink-0" size={14} />
-                          {it}
-                        </span>
-                        <Link to="/book" className="text-sm text-gold inline-flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
-                          Book <ArrowRight size={13} />
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
-
-                {/* Image side */}
-                <div className="lg:col-span-5">
-                  <div className="aspect-[4/3] rounded-2xl overflow-hidden">
-                    <img src={heroImg} alt={g.title} className="w-full h-full object-cover" />
-                  </div>
+                <div className="flex flex-col flex-1 p-12">
+                  <p className="text-2xl font-semibold mb-2 text-primary">{g.title}</p>
+                  <p className="text-black text-lg leading-relaxed mb-5">{g.description}</p>
+                  <Link to="/book" className="mt-auto text-lg font-medium text-primary inline-flex items-center gap-1.5 w-fit border-b border-primary/30 pb-0.5 hover:border-primary transition-colors">
+                    Book a session <ArrowRight size={14} />
+                  </Link>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
       </section>
 
       {/* CTA */}
-      <section className="pb-20 pt-4 bg-background">
+      <section className="py-20 bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <div className="bg-neutral-950 text-white rounded-3xl px-8 py-16 md:px-16 md:py-20 text-center relative overflow-hidden border border-gold/20">
             <div className="absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_30%_20%,white,transparent_35%),radial-gradient(circle_at_75%_80%,var(--gold),transparent_45%)]" />
             <div className="relative">
               <Sparkles className="text-gold mx-auto mb-6" size={32} />
               <h2 className="font-display text-3xl md:text-5xl text-balance max-w-2xl mx-auto mb-6">
-                Not sure where to begin?
+                Your next chapter of <em className="text-gold italic font-display">clarity and growth</em> starts with one small step.
               </h2>
-              <p className="text-white/60 max-w-xl mx-auto mb-10 text-pretty">
-                Book a discovery session and we'll guide you to the path that fits your season — no guesswork, just clarity.
+              <p className="text-white/60 max-w-xl text-lg mx-auto mb-10 text-pretty">
+                Book a free intro chat, explore a program, or simply join the community — however you begin, we're glad you're here.
               </p>
               <div className="flex flex-col sm:flex-row sm:justify-center gap-3 sm:gap-4">
-                <Link to="/book" className="w-full sm:w-auto justify-center bg-gold text-gold-foreground px-7 py-4 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
-                  <Calendar size={18} /> Book a Discovery Session
+                <Link to="/book" className="w-full sm:w-auto justify-center bg-gold text-gold-foreground px-6 py-3 rounded-full font-medium hover:opacity-90 transition inline-flex items-center gap-2">
+                  <Calendar size={18} /> Book a Session
                 </Link>
-                <Link to="/programs" className="w-full sm:w-auto justify-center border-2 border-white/25 text-white px-7 py-4 rounded-full font-medium hover:bg-white/10 transition inline-flex items-center gap-2">
-                  Browse Programs <ArrowRight size={18} />
+                <Link to="/about" className="w-full sm:w-auto justify-center bg-white text-neutral-900 px-6 py-3 rounded-full font-medium hover:bg-white/90 transition inline-flex items-center gap-2">
+                  Learn About COHATA <ArrowRight size={18} />
                 </Link>
               </div>
             </div>

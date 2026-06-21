@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { Availability } from "@/components/BookingsDashboard";
 import { api } from "@/lib/api";
+import bookHeroImg from "@/assets/WhatsApp Image 2026-06-17 at 11.01.46.jpeg";
 
 export const Route = createFileRoute("/book")({
   component: Book,
@@ -225,34 +226,37 @@ function Book() {
     <Layout>
 
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden bg-background">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-[0.06] blur-3xl bg-gold" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-[0.04] blur-3xl bg-primary" />
-        </div>
-        <div className="relative max-w-5xl mx-auto px-6 lg:px-10 pt-24 pb-16">
-          <p className="text-xs uppercase tracking-[0.35em] text-gold mb-5 font-medium">Book a Session</p>
-          <h1 className="font-display text-5xl md:text-6xl lg:text-7xl text-primary leading-[1.08] text-balance mb-5">
-            Begin where you are.<br className="hidden sm:block" />{" "}
-            <em className="text-gold not-italic">Be guided</em> forward.
-          </h1>
-          <p className="text-lg text-foreground/60 max-w-xl leading-relaxed">
-            Every session is a private, intentional space — designed around where you are right now and where you're heading.
-          </p>
+      <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
+        <img src={bookHeroImg} alt="Two women in a private coaching conversation" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 to-black/40" />
+        <div className="relative h-full max-w-7xl mx-auto px-6 lg:px-10 flex items-end pb-16">
+          <div className="grid lg:grid-cols-12 gap-8 w-full items-end">
+            <div className="lg:col-span-7">
+              <p className="text-xs uppercase tracking-[0.3em] text-gold mb-6">Book a Session</p>
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl text-primary-foreground text-balance leading-tight">
+                Begin where you are. <em className="text-gold italic font-display">Be guided</em> forward.
+              </h1>
+            </div>
+            <div className="lg:col-span-5">
+              <p className="text-lg text-white text-pretty lg:text-right">
+                Every session is a private, intentional space — designed around where you are right now and where you're heading.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── Trust strip ── */}
-      <section className="border-y border-border bg-card/60">
-        <div className="max-w-5xl mx-auto px-6 lg:px-10 py-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="bg-black">
+        <div className="max-w-7xl mx-auto px-12 lg:px-10 py-12 grid grid-cols-2 md:grid-cols-4 gap-6">
           {TRUST.map(({ Icon, label, sub }) => (
             <div key={label} className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary/8 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Icon size={15} />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground">{label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{sub}</p>
+                <p className="text-lg font-semibold text-gold">{label}</p>
+                <p className="text-sm text-white mt-1 leading-snug">{sub}</p>
               </div>
             </div>
           ))}
@@ -260,7 +264,7 @@ function Book() {
       </section>
 
       {/* ── Booking form ── */}
-      <section className="max-w-5xl mx-auto px-6 lg:px-10 py-16">
+      <section className="max-w-7xl mx-auto px-6 lg:px-10 py-16">
 
         {/* Step indicators */}
         {!done && (
@@ -291,14 +295,14 @@ function Book() {
 
             {/* Form card */}
             <div className="bg-card border border-border rounded-3xl p-6 md:p-10 shadow-soft">
-              <h2 className="font-display text-2xl text-primary mb-1">Your details</h2>
-              <p className="text-sm text-foreground/60 mb-7">We'll use these to confirm your booking and send the meeting link.</p>
+              <p className="text-2xl font-semibold text-primary mb-1">Your details</p>
+              <p className="text-lg text-black mb-7">We'll use these to confirm your booking and send the meeting link.</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <IconInput icon={User}          placeholder="Full name"                   value={info.name}  onChange={(v) => setInfo({ ...info, name: v })}  required />
                 <IconInput icon={Mail}  type="email" placeholder="Email address"          value={info.email} onChange={(v) => setInfo({ ...info, email: v })} required />
-                <IconInput icon={Phone}          placeholder="Phone number (with country code)" value={info.phone} onChange={(v) => setInfo({ ...info, phone: v })} required />
-                <IconInput icon={MessageSquare} placeholder="What would you like to focus on? (optional)" value={info.note}  onChange={(v) => setInfo({ ...info, note: v })}  rows={4} />
+                <IconInput icon={Phone}          placeholder="Phone number" value={info.phone} onChange={(v) => setInfo({ ...info, phone: v })} required />
+                <IconInput icon={MessageSquare} placeholder="What would you like to focus on?" value={info.note}  onChange={(v) => setInfo({ ...info, note: v })}  rows={2} />
 
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
                   <Lock size={11} /> Your information is private and will never be shared.
@@ -332,7 +336,7 @@ function Book() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Session</p>
-                    <p className="font-medium text-foreground">{selectedType?.name}</p>
+                    <p className="font-semibold text-black text-sm">{selectedType?.name}</p>
                     {selectedType?.pricePerHour === 0 && (
                       <span className="text-xs text-emerald-600 font-medium">Free</span>
                     )}
@@ -340,12 +344,12 @@ function Book() {
                   <div className="h-px bg-border" />
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Date</p>
-                    <p className="font-medium text-foreground text-sm">{fmtDate(date)}</p>
+                    <p className="font-semibold text-black text-sm">{fmtDate(date)}</p>
                   </div>
                   <div className="h-px bg-border" />
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Time</p>
-                    <p className="font-medium text-foreground">{time && fmt12(time)} – {endTime && fmt12(endTime)}</p>
+                    <p className="font-semibold text-black text-sm">{time && fmt12(time)} – {endTime && fmt12(endTime)}</p>
                     <p className="text-xs text-muted-foreground">{hours} {hours === 1 ? "hour" : "hours"}</p>
                   </div>
                   {amountDue > 0 && (
@@ -410,29 +414,29 @@ function Book() {
             /* ── Step 1 ── */
             ) : step === 1 ? (
               <div className="bg-card border border-border rounded-3xl p-6 md:p-10 shadow-soft">
-                <h2 className="font-display text-2xl text-primary mb-1">Choose a session</h2>
-                <p className="text-sm text-foreground/60 mb-7">Select the type of session that fits where you are right now.</p>
+                <p className="text-2xl font-semibold mb-2 text-primary">Choose a session</p>
+                <p className="text-lg text-black mb-7">Select the type of session that fits where you are right now.</p>
                 {sessionTypes.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">Loading session types…</p>
                 ) : (
-                  <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="grid sm:grid-cols-2 gap-8">
                     {sessionTypes.map((s) => (
                       <button
                         type="button"
                         key={s.id}
                         onClick={() => selectType(s.id)}
-                        className={`text-left p-5 rounded-2xl border-2 transition-all ${type === s.id ? "border-primary bg-primary/4 shadow-sm" : "border-border hover:border-primary/40 hover:bg-muted/30"}`}
+                        className={`text-left p-5 rounded-2xl border-1 transition-all ${type === s.id ? "border-primary bg-primary/4 shadow-sm" : "border-border hover:border-primary/40 hover:bg-muted/30"}`}
                       >
-                        <div className="flex justify-between items-start mb-2.5">
-                          <h3 className="text-base font-medium text-primary leading-snug pr-2">{s.name}</h3>
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="text-xl font-semibold text-primary pr-2">{s.name}</p>
                           {s.pricePerHour > 0
-                            ? <span className="text-xs text-gold font-semibold whitespace-nowrap">{fmtNaira(s.pricePerHour)}/hr</span>
-                            : <span className="text-xs text-emerald-600 font-semibold whitespace-nowrap">Free</span>
+                            ? <span className="text-sm text-gold font-semibold whitespace-nowrap">{fmtNaira(s.pricePerHour)}/hr</span>
+                            : <span className="text-sm text-emerald-600 font-semibold whitespace-nowrap">Free</span>
                           }
                         </div>
-                        <p className="text-xs text-foreground/60 leading-relaxed">{s.description}</p>
+                        <p className="text-sm text-black leading-relaxed">{s.description}</p>
                         {type === s.id && (
-                          <div className="flex items-center gap-1.5 mt-3 text-primary text-xs font-medium">
+                          <div className="flex items-center gap-1.5 mt-3 text-primary text-sm font-medium">
                             <Check size={12} /> Selected
                           </div>
                         )}
@@ -455,10 +459,13 @@ function Book() {
             /* ── Step 2 ── */
             ) : (
               <div className="bg-card border border-border rounded-3xl p-6 md:p-10 shadow-soft">
-                <h2 className="font-display text-2xl text-primary mb-1">Pick a date & time</h2>
-                <p className="text-sm text-foreground/60 mb-7">
-                  We're available {availability.days.map((d) => DAY_LABELS[d]).join(", ")}, {fmt12(availability.startTime)}–{fmt12(availability.endTime)}.
+                <p className="text-xl font-semibold text-primary mb-1">Pick a date & time</p>
+                <p className="text-lg text-black mb-7">
+                  We're available everyday 11:00 AM – 5:00 PM.
                 </p>
+                {/* <p className="text-lg text-black mb-7">
+                  We're available {availability.days.map((d) => DAY_LABELS[d]).join(", ")}, {fmt12(availability.startTime)}–{fmt12(availability.endTime)}.
+                </p> */}
 
                 <div className="grid md:grid-cols-2 gap-8">
                   {/* Date */}
@@ -472,7 +479,7 @@ function Book() {
                       min={minDate}
                       value={date}
                       onChange={(e) => { setDate(e.target.value); setTime(null); }}
-                      className="w-full px-5 py-3.5 rounded-xl border border-input bg-background focus:outline-none focus:border-primary text-sm"
+                      className="w-full px-5 py-3.5 rounded-xl border border-input bg-background focus:outline-none focus:border-primary text-lg"
                     />
                     {dayUnavailable && (
                       <p className="mt-3 text-sm text-destructive flex items-center gap-2">
@@ -499,7 +506,7 @@ function Book() {
                             type="button"
                             key={t}
                             onClick={() => selectTime(t)}
-                            className={`py-2.5 rounded-xl border text-sm transition ${time === t ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40 hover:bg-muted/30"}`}
+                            className={`py-2.5 rounded-xl border text-lg transition ${time === t ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/40 hover:bg-muted/30"}`}
                           >
                             {fmt12(t)}
                           </button>
@@ -562,7 +569,7 @@ function Book() {
       </section>
 
       {/* ── What happens next ── */}
-      {!done && (
+      {/* {!done && (
         <section className="border-t border-border bg-card/40 py-16">
           <div className="max-w-5xl mx-auto px-6 lg:px-10">
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">After you book</p>
@@ -580,7 +587,7 @@ function Book() {
             </div>
           </div>
         </section>
-      )}
+      )} */}
 
     </Layout>
   );
