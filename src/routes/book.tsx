@@ -523,13 +523,13 @@ function Book() {
                     <div className="flex items-center gap-4">
                       <button type="button" aria-label="Decrease hours" onClick={() => changeHours(-1)}
                         disabled={hours <= selectedType.minHours}
-                        className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground/70 hover:border-primary disabled:opacity-30 transition">
+                        className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-foreground/70 hover:border-primary disabled:opacity-30 transition">
                         <Minus size={14} />
                       </button>
                       <span className="text-3xl font-display text-primary w-8 text-center tabular-nums">{hours}</span>
                       <button type="button" aria-label="Increase hours" onClick={() => changeHours(1)}
                         disabled={hours >= maxAvailableHours}
-                        className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground/70 hover:border-primary disabled:opacity-30 transition">
+                        className="w-11 h-11 rounded-full border border-border flex items-center justify-center text-foreground/70 hover:border-primary disabled:opacity-30 transition">
                         <Plus size={14} />
                       </button>
                       <div className="ml-1 flex-1">
