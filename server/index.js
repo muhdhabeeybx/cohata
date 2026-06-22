@@ -260,7 +260,7 @@ async function sendClientConfirmationEmail(booking) {
   const subject = isSession ? `You're booked: ${booking.program}` : `Enrollment received: ${booking.program}`;
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: booking.email,
       subject,
@@ -277,6 +277,7 @@ async function sendClientConfirmationEmail(booking) {
         </div>
       `,
     });
+    if (error) console.error("Failed to send client confirmation email:", error);
   } catch (e) {
     console.error("Failed to send client confirmation email:", e.message);
   }
@@ -294,7 +295,7 @@ async function sendAdminNotificationEmail(booking) {
   const subject = `New ${kind}: ${booking.name} — ${booking.program}`;
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: recipients,
       subject,
@@ -313,6 +314,7 @@ async function sendAdminNotificationEmail(booking) {
         </div>
       `,
     });
+    if (error) console.error("Failed to send admin notification email:", error);
   } catch (e) {
     console.error("Failed to send admin notification email:", e.message);
   }
@@ -346,6 +348,36 @@ async function sendClientConfirmationSms(booking) {
     }
   } catch (e) {
     console.error("Failed to send confirmation SMS:", e.message);
+  }
+}
+
+// Sent to every staff user when someone submits the public contact form.
+async function sendContactNotificationEmail({ name, email, message }) {
+  if (!resend) return;
+  const staff = await User.find({}, "email");
+  const recipients = staff.map((u) => u.email).filter(Boolean);
+  if (recipients.length === 0) return;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: recipients,
+      subject: `New contact form message from ${name}`,
+      html: `
+        <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
+          <h2 style="color:#0f4c3a; margin-bottom: 4px;">New contact message</h2>
+          <p style="margin:4px 0;"><strong>Name:</strong> ${name}</p>
+          <p style="margin:4px 0;"><strong>Email:</strong> ${email}</p>
+          <div style="background:#f7f7f5; border-radius:12px; padding:16px 20px; margin:20px 0;">
+            <p style="margin:0; white-space:pre-wrap;">${message}</p>
+          </div>
+          <p>Reply directly to <a href="mailto:${email}" style="color:#0f4c3a;">${email}</a>.</p>
+        </div>
+      `,
+    });
+    if (error) console.error("Failed to send contact notification email:", error);
+  } catch (e) {
+    console.error("Failed to send contact notification email:", e.message);
   }
 }
 
@@ -781,6 +813,19 @@ app.get("/api/community-signups", authenticate, requireRole("admin", "bookings")
     const signups = await CommunitySignup.find().sort({ createdAt: -1 });
     res.json(signups);
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Contact form ─────────────────────────────────────────────────────────────
+
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "Name, email, and message are required" });
+    }
+    await sendContactNotificationEmail({ name, email, message });
+    res.status(201).json({ ok: true });
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

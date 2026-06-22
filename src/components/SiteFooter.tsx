@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { Phone, Mail, MapPin } from "lucide-react";
 
 export function SiteFooter() {
   const [email, setEmail] = useState("");
@@ -49,6 +50,7 @@ export function SiteFooter() {
               <li><Link to="/services">Services</Link></li>
               <li><Link to="/programs">Programs</Link></li>
               <li><Link to="/community">Community</Link></li>
+              <li><Link to="/contact">Contact</Link></li>
             </ul>
           </div>
 
@@ -62,10 +64,21 @@ export function SiteFooter() {
           </div>
 
           <div className="lg:col-span-3">
-            <p className="text-xs uppercase tracking-[0.2em] text-gold mb-4">Brand Essence</p>
-            <h3 className="text-xl text-primary-foreground/90">
-              Faith. Growth. Transformation.
-            </h3>
+            <p className="text-xs uppercase tracking-[0.2em] text-gold mb-4">Contact</p>
+            <ul className="space-y-3 text-sm text-primary-foreground/80">
+              <li className="flex items-start gap-2.5">
+                <Phone size={14} className="text-gold mt-0.5 flex-shrink-0" />
+                <a href="tel:08029337591" className="hover:text-gold transition-colors">0802 933 7591</a>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Mail size={14} className="text-gold mt-0.5 flex-shrink-0" />
+                <a href="mailto:hello@cohatacademy.com" className="hover:text-gold transition-colors">hello@cohatacademy.com</a>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <MapPin size={14} className="text-gold mt-0.5 flex-shrink-0" />
+                <span>36 Lord Lugard Street, Area 11, Abuja</span>
+              </li>
+            </ul>
           </div>
         </div>
 

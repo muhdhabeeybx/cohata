@@ -9,7 +9,7 @@ const nav = [
   { to: "/services", label: "Services" },
   { to: "/programs", label: "Programs" },
   { to: "/community", label: "Community" },
-  { to: "/book", label: "Book" },
+  { to: "/contact", label: "Contact" },
 ];
 
 export function SiteHeader() {

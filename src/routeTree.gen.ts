@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ProgramsRouteImport } from './routes/programs'
 import { Route as PaymentCallbackRouteImport } from './routes/payment-callback'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as BookRouteImport } from './routes/book'
 import { Route as AboutRouteImport } from './routes/about'
@@ -33,6 +34,11 @@ const ProgramsRoute = ProgramsRouteImport.update({
 const PaymentCallbackRoute = PaymentCallbackRouteImport.update({
   id: '/payment-callback',
   path: '/payment-callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityRoute = CommunityRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/book': typeof BookRoute
   '/community': typeof CommunityRoute
+  '/contact': typeof ContactRoute
   '/payment-callback': typeof PaymentCallbackRoute
   '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/book': typeof BookRoute
   '/community': typeof CommunityRoute
+  '/contact': typeof ContactRoute
   '/payment-callback': typeof PaymentCallbackRoute
   '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/book': typeof BookRoute
   '/community': typeof CommunityRoute
+  '/contact': typeof ContactRoute
   '/payment-callback': typeof PaymentCallbackRoute
   '/programs': typeof ProgramsRoute
   '/services': typeof ServicesRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/book'
     | '/community'
+    | '/contact'
     | '/payment-callback'
     | '/programs'
     | '/services'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/book'
     | '/community'
+    | '/contact'
     | '/payment-callback'
     | '/programs'
     | '/services'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/book'
     | '/community'
+    | '/contact'
     | '/payment-callback'
     | '/programs'
     | '/services'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   BookRoute: typeof BookRoute
   CommunityRoute: typeof CommunityRoute
+  ContactRoute: typeof ContactRoute
   PaymentCallbackRoute: typeof PaymentCallbackRoute
   ProgramsRoute: typeof ProgramsRoute
   ServicesRoute: typeof ServicesRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/payment-callback'
       fullPath: '/payment-callback'
       preLoaderRoute: typeof PaymentCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community': {
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   BookRoute: BookRoute,
   CommunityRoute: CommunityRoute,
+  ContactRoute: ContactRoute,
   PaymentCallbackRoute: PaymentCallbackRoute,
   ProgramsRoute: ProgramsRoute,
   ServicesRoute: ServicesRoute,
