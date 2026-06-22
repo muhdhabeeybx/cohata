@@ -38,12 +38,20 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <Link
-          to="/book"
-          className="hidden lg:inline-flex flex-shrink-0 items-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-soft transition hover:opacity-90"
-        >
-          Begin Your Journey
-        </Link>
+        <div className="hidden lg:flex flex-shrink-0 items-center gap-3">
+          <Link
+            to="/admin/login"
+            className="inline-flex items-center rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground/70 transition hover:border-primary hover:text-primary"
+          >
+            Login
+          </Link>
+          <Link
+            to="/book"
+            className="inline-flex items-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-soft transition hover:opacity-90"
+          >
+            Begin Your Journey
+          </Link>
+        </div>
 
         <button
           type="button"
@@ -76,6 +84,13 @@ export function SiteHeader() {
               className="mt-3 inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground"
             >
               Begin Your Journey
+            </Link>
+            <Link
+              to="/admin/login"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center justify-center rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground/70"
+            >
+              Login
             </Link>
           </div>
         </div>

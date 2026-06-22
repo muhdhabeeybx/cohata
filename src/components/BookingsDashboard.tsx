@@ -1694,7 +1694,7 @@ export function BookingsDashboard() {
           <p className="text-xs mt-2 font-semibold uppercase tracking-widest" style={{ color: "var(--gold)" }}>Admin Portal</p>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5">
+        <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-0.5">
           {visibleNav.map(({ id, label, Icon }) => (
             <button type="button" key={id} onClick={() => { setView(id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${view === id ? "bg-white/15 text-white" : "text-white/55 hover:text-white hover:bg-white/8"}`}>
               <Icon size={16} />
